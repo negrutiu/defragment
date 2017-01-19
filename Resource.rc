@@ -70,7 +70,7 @@ BEGIN
             VALUE "FileDescription", "Defrag"
             VALUE "FileVersion", "1.0.0.0"
             VALUE "InternalName", "Defrag"
-            VALUE "LegalCopyright", "©2017, Marius Negrutiu. All rights reserved."
+            VALUE "LegalCopyright", "(C)2017, Marius Negrutiu. All rights reserved."
             VALUE "OriginalFilename", "Defrag.exe"
             VALUE "ProductName", "Defrag"
             VALUE "ProductVersion", "1.0.0.0"
