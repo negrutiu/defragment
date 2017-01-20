@@ -22,4 +22,4 @@ mingw32-make.exe ARCH=X64 CHAR=Unicode OUTDIR=Release-mingw-x64 -fMakefile.mingw
 if %ERRORLEVEL% neq 0 echo ERRORLEVEL == %ERRORLEVEL% && pause && goto :EOF
 
 echo.
-pause
+REM pause
