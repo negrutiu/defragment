@@ -42,24 +42,13 @@ typedef struct {
 
 	/// File list
 	DEFRAG_FILE *Files;
+	BOOL CompactFiles;
 
 	/// Analysis
-	struct {
-		BOOL Dirty;									/// Set after defragmentation. If TRUE, all analysis data must be treated as obsolete. A new analysis should be performed
-		ULONG FileCount;							/// Count of all files
-		ULONG64 TotalSize;							/// Combined file sizes
-		ULONG64 MaxFileFragments;					/// Most fragmented file
-		ULONG64 ClusterCount;						/// Overall number of clusters
-		ULONG64 ExtentCount;						/// Overall number of extents (fragments)
-		ULONG64 DiffuseExtentCount;					/// Overall number of extents that are not contiguous
-	} Analysis;
+	DEFRAG_ANALYSIS Analysis;
 
 	/// Defragment
-	struct {
-		ULONG64 FileCount;
-		ULONG64 TotalSize;
-		ULONG64 ClusterCount;
-	} Defrag;
+	DEFRAG_DEFRAGMENT Defrag;
 
 } DEFRAG_FILES;
 
@@ -499,7 +488,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 
 			// Open volume
 			Log( Data, _T( "%s" ), _T( "\n" ) );
-			Log( Data, _T( "Retrieve %s volume bitmap\n" ), Data->Volume.Name );
+			Log( Data, _T( "Read %s volume bitmap\n" ), Data->Volume.Name );
 			if (!ValidHandle( Data->Volume.Handle )) {
 				Data->Volume.Handle = CreateFile( Data->Volume.Name, FILE_READ_DATA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL );
 				if (!ValidHandle( Data->Volume.Handle ))
@@ -598,6 +587,11 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 						}
 					}
 
+					/// Results
+					Log( Data, _T( "%s" ), _T( "\n" ) );
+					Log( Data, _T( "  Files:    %u defragmented\n" ), Data->Defrag.FileCount );
+					Log( Data, _T( "  Clusters: %I64u (%I64u bytes) relocated\n" ), Data->Defrag.ClusterCount, Data->Defrag.TotalSize );
+
 				} else {
 					/// There's no empty space for all files
 					err = ERROR_DISK_FULL;
@@ -619,45 +613,77 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 }
 
 
-//++ DefragmentFile
-DWORD DefragmentFile( _In_ LPCTSTR pszFile, _Out_opt_ PULONG64 piBytesMoved, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
+//++ DefragAnalyzeFiles
+DWORD DefragAnalyzeFiles( _In_ LPCTSTR *ppszFiles, _Out_opt_ PDEFRAG_ANALYSIS pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
 {
-	LPCTSTR Files[2] = {pszFile, NULL};
-	return CompactFiles( Files, piBytesMoved, fnLogging, lpLoggingParam );
+	DWORD err = ERROR_SUCCESS;
+	if (ppszFiles) {
+		
+		DEFRAG_FILES Data = {0};
+		Data.fnLogging = fnLogging;
+		Data.lpLoggingParam = lpLoggingParam;
+
+		if (pOut)
+			ZeroMemory( pOut, sizeof( *pOut ) );
+
+		err = DefragDataCreate( &Data, ppszFiles );
+		if (err == ERROR_SUCCESS) {
+
+			err = DefragDataAnalyze( &Data );
+			if (pOut)
+				CopyMemory( pOut, &Data.Analysis, sizeof( *pOut ) );
+		}
+
+		DefragDataDestroy( &Data );
+	
+	} else {
+		err = ERROR_INVALID_PARAMETER;
+	}
+	return err;
 }
 
 
-//++ CompactFiles
-DWORD CompactFiles( _In_ LPCTSTR *ppszFileList, _Out_opt_ PULONG64 piBytesMoved, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
+//++ DefragDefragmentFiles
+DWORD DefragDefragmentFiles( _In_ LPCTSTR *ppszFiles, _In_ BOOL bCompact, _Out_opt_ PDEFRAG_DEFRAGMENT pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
 {
 	DWORD err = ERROR_SUCCESS;
-	DEFRAG_FILES Data = {0};
+	if (ppszFiles) {
 
-	if (piBytesMoved)
-		*piBytesMoved = 0;
+		DEFRAG_FILES Data = {0};
 
-	Data.fnLogging = fnLogging;
-	Data.lpLoggingParam = lpLoggingParam;
+		if (pOut)
+			ZeroMemory( pOut, sizeof( *pOut ) );
 
-	// Gather data
-	err = DefragDataCreate( &Data, ppszFileList );
-	if (err == ERROR_SUCCESS) {
+		Data.fnLogging = fnLogging;
+		Data.lpLoggingParam = lpLoggingParam;
+		Data.CompactFiles = bCompact;
 
-		// Analyze fragmentation
-		err = DefragDataAnalyze( &Data );
+		//! TODO
+		if (!bCompact) {
+			Log( &Data, _T( "TODO: Defragment individual files\n" ), 0 );
+			return ERROR_NOT_SUPPORTED;
+		}
+
+		err = DefragDataCreate( &Data, ppszFiles );
 		if (err == ERROR_SUCCESS) {
 
-			// Defragment and compact all files
-			err = DefragDataDefragment( &Data );
+			err = DefragDataAnalyze( &Data );
 			if (err == ERROR_SUCCESS) {
 
-				if (piBytesMoved)
-					*piBytesMoved = Data.Defrag.TotalSize;
+				err = DefragDataDefragment( &Data );
+				if (err == ERROR_SUCCESS) {
+
+					if (pOut)
+						CopyMemory( pOut, &Data.Defrag, sizeof( *pOut ) );
+				}
 			}
 		}
-	}
 
-	DefragDataDestroy( &Data );
+		DefragDataDestroy( &Data );
+
+	} else {
+		err = ERROR_INVALID_PARAMETER;
+	}
 	return err;
 }
 

@@ -15,7 +15,7 @@
 
 PROJECT  = Defrag
 BIN      = $(PROJECT).exe
-OBJ      = StdAfx.o Main.o Defragment.o ResourceEx.res
+OBJ      = StdAfx.o Main.o Defragment.o FileList.o ResourceEx.res
 SAL      = -D__in= -D__out= -D__inout= -D__in_opt= -D__out_opt= \
            -D_In_= -D_Out_= -D_Inout_= -D_In_opt_= -D_Out_opt_=
 

@@ -24,6 +24,9 @@
     <ClInclude Include="Defragment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FileList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.c">
@@ -33,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Defragment.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FileList.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

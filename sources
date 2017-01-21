@@ -44,4 +44,5 @@ SOURCES=\
 	StdAfx.c \
 	Main.c \
 	Defragment.c \
+	FileList.c \
 	ResourceEx.rc

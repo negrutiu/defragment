@@ -164,11 +164,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Defragment.h" />
+    <ClInclude Include="FileList.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Defragment.c" />
+    <ClCompile Include="FileList.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="StdAfx.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

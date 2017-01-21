@@ -1,72 +1,42 @@
 #include "StdAfx.h"
 #include "Defragment.h"
+#include "FileList.h"
 
 
-//++ PrintSyntax
-VOID PrintSyntax()
+//++ PrintCopyright
+VOID PrintCopyright()
 {
 	_tprintf(
 		_T( "\n" )
 		_T( "Defragment and compact files\n" )
 		_T( "(c)2017, Marius Negrutiu. All rights reserved.\n" )
 		_T( "\n" )
+	);
+}
+
+
+//++ PrintSyntax
+VOID PrintSyntax()
+{
+	_tprintf(
 		_T( "Syntax:\n" )
-		_T( "  Defrag.exe <Files.txt>\n" )
+		_T( "  Defrag.exe <Command> <File list>\n" )
 		_T( "\n" )
-		_T( "Files.txt is a text file containing a list of files (one file per line) to be defragmented\n" )
-		_T( "Files will be defragmented and moved close together to a contiguous disk location\n" )
+		_T( "Commands:\n" )
+		_T( "  /analyze    Analyze files' fragmentation\n" )
+		_T( "  /defrag     Defragment individual files\n" )
+		_T( "  /compact    Defragment and move files to a contiguous disk location\n" )
 		_T( "\n" )
-		);
-}
-
-
-//++ ImportFileList
-DWORD ImportFileList( _In_ LPCTSTR pszFile, _Out_ LPCTSTR ppszFileList[255] )
-{
-	DWORD err = ERROR_SUCCESS;
-	FILE *f = _tfopen( pszFile, _T( "rS, ccs=UTF-8" ) );
-	if (f) {
-
-		TCHAR szBuf[512];
-		TCHAR szBuf2[512];
-		size_t Len;
-		ULONG FileListIndex = 0;
-
-		while (_fgetts( szBuf, ARRAYSIZE( szBuf ), f ) != NULL) {
-			if (SUCCEEDED( StringCchLength( szBuf, ARRAYSIZE( szBuf ), &Len ) )) {
-				
-				///	Remove trailing EOLN
-				if (Len > 0 && szBuf[Len - 1] == _T( '\n' ))
-					szBuf[--Len] = _T( '\0' );
-
-				/// Expand environment variables
-				ExpandEnvironmentStrings( szBuf, szBuf2, ARRAYSIZE( szBuf2 ) );
-
-				/// Clone and store
-				ppszFileList[FileListIndex++] = _tcsdup( szBuf2 );
-			}
-		}
-		ppszFileList[FileListIndex++] = NULL;		/// Last string is NULL
-		
-		fclose( f );
-
-	} else {
-		err = ERROR_FILE_CORRUPT;
-	}
-	return err;
-}
-
-
-//++ DestroyFileList
-DWORD DestroyFileList( _Out_ LPCTSTR ppszFileList[255] )
-{
-	DWORD err = ERROR_SUCCESS;
-	ULONG i;
-	for (i = 0; (i < 255) && (ppszFileList[i] != NULL); i++) {
-		free( (LPVOID)ppszFileList[i] );
-		ppszFileList[i] = NULL;
-	}
-	return err;
+		_T( "File list:\n" )
+		_T( "  One or more files and/or directories\n" )
+		_T( "  If prefixed by @, each file is treated as a textfile catalog (one file per line)\n" )
+		_T( "\n" )
+		_T( "Examples:\n" )
+		_T( "  Defrag /analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
+		_T( "  Defrag /defrag  C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
+		_T( "  Defrag /compact C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
+		_T( "\n" )
+	);
 }
 
 
@@ -106,40 +76,93 @@ VOID DefragLogging( _In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ... )
 //++ _tmain
 int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 {
+#define COMMAND_NONE		0
+#define COMMAND_ANALYZE		1
+#define COMMAND_DEFRAG		2
+#define COMMAND_COMPACT		3
+
 	DWORD err = ERROR_SUCCESS;
+	ULONG iCommand = COMMAND_NONE;
+	int i;
+	FILE_LIST FileList = {0};
 
-	PrintSyntax();
+	PrintCopyright();
 
-	if (argc == 2) {
-		ULONG64 iBytesMoved;
-		LPCTSTR ppszFileList[255] = {0};
-
-		err = ImportFileList( argv[1], ppszFileList );
-		if (err == ERROR_SUCCESS) {
-
-			err = CompactFiles( (LPCTSTR*)ppszFileList, &iBytesMoved, DefragLogging, NULL );
-			if (err == ERROR_SUCCESS) {
-				
-				// Success
-				DefragLogging( NULL, _T( "\n" ) );
-				DefragLogging( NULL, _T( "Success (%I64u bytes moved)\n" ), iBytesMoved );
-
+	// Command line
+	for (i = 0; i < argc; i++)
+	{
+		if (iCommand != COMMAND_NONE) {
+			
+			if (argv[i][0] == _T( '@' )) {
+				FileListAddCatalog( &FileList, argv[i] + 1 );
 			} else {
-				TCHAR szError[255];
-				DefragLogging( NULL, _T( "\n" ) );
-				DefragLogging( NULL, _T( "ERROR: 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
+				FileListAddFile( &FileList, argv[i] );
 			}
-		} else {
-			TCHAR szError[255];
-			DefragLogging( NULL, _T( "\n" ) );
-			DefragLogging( NULL, _T( "ERROR: Failed to read from \"%s\". Error 0x%x \"%s\"\n" ), argv[1], err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
-		}
-		DestroyFileList( ppszFileList );
 
-	} else {
-		DefragLogging( NULL, _T( "\n" ) );
-		DefragLogging( NULL, _T( "ERROR: No input specified\n" ) );
+		} else {
+
+			if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/analyze" ), -1 ) == CSTR_EQUAL ||
+				CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-analyze" ), -1 ) == CSTR_EQUAL)
+			{
+				iCommand = COMMAND_ANALYZE;
+			}
+			else if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defrag" ), -1 ) == CSTR_EQUAL ||
+					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defrag" ), -1 ) == CSTR_EQUAL ||
+					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defragment" ), -1 ) == CSTR_EQUAL ||
+					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defragment" ), -1 ) == CSTR_EQUAL)
+			{
+				iCommand = COMMAND_DEFRAG;
+			}
+			else if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/compact" ), -1 ) == CSTR_EQUAL ||
+					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-compact" ), -1 ) == CSTR_EQUAL)
+			{
+				iCommand = COMMAND_COMPACT;
+			}
+			else
+			{
+				_tprintf( _T( "Warning: Unknown command \"%s\"\n" ), argv[i] );
+			}
+		}
+	}
+	_tprintf( _T( "\n" ) );
+
+
+	// Execute command
+	switch (iCommand)
+	{
+		case COMMAND_ANALYZE:
+			err = DefragAnalyzeFiles( FileList.ppszFiles, NULL, DefragLogging, NULL );
+			if (TRUE) {
+				TCHAR szError[255];
+				_tprintf( _T( "\n" ) );
+				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
+			}
+			break;
+
+		case COMMAND_DEFRAG:
+			err = DefragDefragmentFiles( FileList.ppszFiles, FALSE, NULL, DefragLogging, NULL );
+			if (TRUE) {
+				TCHAR szError[255];
+				_tprintf( _T( "\n" ) );
+				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
+			}
+			break;
+
+		case COMMAND_COMPACT:
+			err = DefragDefragmentFiles( FileList.ppszFiles, TRUE, NULL, DefragLogging, NULL );
+			if (TRUE) {
+				TCHAR szError[255];
+				_tprintf( _T( "\n" ) );
+				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
+			}
+			break;
+
+		default:
+			err = ERROR_INVALID_PARAMETER;
+			PrintSyntax();
+			_tprintf( _T( "ERROR: Invalid command\n" ) );
 	}
 
+	FileListDestroy( &FileList );
 	return err;
 }
