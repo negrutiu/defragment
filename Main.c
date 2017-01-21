@@ -93,18 +93,18 @@ LPTSTR FormatError( _In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen 
 
 
 //++ DefragLogging
-VOID DefragLogging( __in LPVOID lpParam, __in LPCTSTR szFmt, ... )
+VOID DefragLogging( _In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ... )
 {
-	UNREFERENCED_PARAMETER( lpParam );
 	va_list args;
-	va_start( args, szFmt );
-	_vtprintf( szFmt, args );
+	UNREFERENCED_PARAMETER( lpParam );
+	va_start( args, pszFmt );
+	_vtprintf( pszFmt, args );
 	va_end( args );
 }
 
 
 //++ _tmain
-int __cdecl _tmain( __in int argc, __in _TCHAR* argv[], __in _TCHAR* envp[] )
+int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 {
 	DWORD err = ERROR_SUCCESS;
 

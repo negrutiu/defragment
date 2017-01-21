@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 // Callback useful for logging
-typedef VOID( *DefragmentLoggingCallback )(__in LPVOID lpParam, __in LPCTSTR szFmt, ...);
+typedef VOID( *DefragmentLoggingCallback )(_In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ...);
 
 // Defragment single file
 // If the file is not fragmented, the function returns ERROR_SUCCESS and BytesMoved will be zero

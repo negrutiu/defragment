@@ -466,7 +466,7 @@ DWORD DefragDataAnalyze( _Inout_ DEFRAG_FILES* Data )
 		}
 
 		/// Results
-		Log( Data, _T( "\n" ) );
+		Log( Data, _T("%s"), _T( "\n" ) );
 		Log( Data, _T( "  Files:    %u (most fragmented has %I64u extents)\n" ), Data->Analysis.FileCount, Data->Analysis.MaxFileFragments );
 		Log( Data, _T( "  Extents:  %I64u (%I64u clusters, %I64u bytes)\n" ), Data->Analysis.ExtentCount, Data->Analysis.ClusterCount, Data->Analysis.TotalSize );
 		Log( Data, _T( "  Diffuse:  %I64u extents\n" ), Data->Analysis.DiffuseExtentCount );
@@ -498,7 +498,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 			ZeroMemory( &Data->Defrag, sizeof( Data->Defrag ) );
 
 			// Open volume
-			Log( Data, _T( "\n" ) );
+			Log( Data, _T( "%s" ), _T( "\n" ) );
 			Log( Data, _T( "Retrieve %s volume bitmap\n" ), Data->Volume.Name );
 			if (!ValidHandle( Data->Volume.Handle )) {
 				Data->Volume.Handle = CreateFile( Data->Volume.Name, FILE_READ_DATA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL );
@@ -557,7 +557,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 
 					// Defragment
 					LONG64 VolumeLcn = Data->Volume.Bitmap->StartingLcn.QuadPart + BitmapSequenceStart * 8;
-					Log( Data, _T( "\n" ) );
+					Log( Data, _T( "%s" ), _T( "\n" ) );
 					for (f = Data->Files; f && (err == ERROR_SUCCESS); f = f->Next) {
 						Log( Data, _T( "Defragment %s\n" ), f->Path );
 						if (f->Fragments->ExtentCount > 1)
@@ -601,14 +601,14 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 				} else {
 					/// There's no empty space for all files
 					err = ERROR_DISK_FULL;
-					Log( Data, _T( "  Not enough disk space to perform defragmentation\n" ) );
+					Log( Data, _T( "%s" ), _T( "  Not enough disk space to perform defragmentation\n" ) );
 				}
 			} else {
 				/// No volume bitmap
 				Log( Data, _T( "  Error 0x%x\n" ), err );
 			}
 		} else {
-			Log( Data, _T( "  Nothing to defragment.\n" ) );
+			Log( Data, _T( "%s" ), _T( "  Nothing to defragment.\n" ) );
 		}
 
 	} else {
