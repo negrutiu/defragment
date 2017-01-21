@@ -20,32 +20,6 @@ VOID PrintSyntax()
 }
 
 
-//++ EnableWow64FsRedirection
-BOOLEAN EnableWow64FsRedirection( IN BOOLEAN bEnable )
-{
-	BOOLEAN ret = FALSE;
-	typedef BOOL( WINAPI *FNIsWow64Process )(HANDLE, PBOOL);
-	FNIsWow64Process fnIsWow64Process = NULL;
-
-	// only enable/disable redirection if we're running in WOW64
-	fnIsWow64Process = (FNIsWow64Process)GetProcAddress( GetModuleHandle( TEXT( "kernel32.dll" ) ), "IsWow64Process" );
-	if (fnIsWow64Process) {
-		BOOL bWow64 = FALSE;
-		if (fnIsWow64Process( GetCurrentProcess(), &bWow64 ) && bWow64) {
-			// enable/disable file system redirection
-			typedef BOOLEAN( WINAPI *FNEnableWow64FsRedir )(BOOLEAN);
-			FNEnableWow64FsRedir fnEnableWow64FsRedir = (FNEnableWow64FsRedir)GetProcAddress( GetModuleHandle( TEXT( "kernel32.dll" ) ), "Wow64EnableWow64FsRedirection" );
-			if (fnEnableWow64FsRedir) {
-				if (fnEnableWow64FsRedir( bEnable )) {
-					ret = TRUE;
-				}
-			}
-		}
-	}
-	return ret;
-}
-
-
 //++ ImportFileList
 DWORD ImportFileList( _In_ LPCTSTR pszFile, _Out_ LPCTSTR ppszFileList[255] )
 {
@@ -96,13 +70,45 @@ DWORD DestroyFileList( _Out_ LPCTSTR ppszFileList[255] )
 }
 
 
+//++ FormatError
+LPTSTR FormatError( _In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen )
+{
+	if (pszError && iErrorLen) {
+		DWORD iLen = 0;
+		pszError[0] = _T( '\0' );
+		if ((iLen = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
+			if ((iLen = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE, GetModuleHandle( _T( "ntdll" ) ), err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
+				/// Try others...
+			}
+		}
+		if (iLen > 0) {
+			/// Trim trailing noise
+			for (iLen--; (iLen > 0) && (pszError[iLen] == _T( '.' ) || pszError[iLen] == _T( ' ' ) || pszError[iLen] == _T( '\r' ) || pszError[iLen] == _T( '\n' )); iLen--)
+				pszError[iLen] = _T( '\0' );
+			iLen++;
+		}
+	}
+	return pszError;
+}
+
+
+//++ DefragLogging
+VOID DefragLogging( __in LPVOID lpParam, __in LPCTSTR szFmt, ... )
+{
+	UNREFERENCED_PARAMETER( lpParam );
+	va_list args;
+	va_start( args, szFmt );
+	_vtprintf( szFmt, args );
+	va_end( args );
+}
+
+
 //++ _tmain
 int __cdecl _tmain( __in int argc, __in _TCHAR* argv[], __in _TCHAR* envp[] )
 {
 	DWORD err = ERROR_SUCCESS;
 
 	PrintSyntax();
-	EnableWow64FsRedirection( FALSE );			/// Disable file system redirection in WOW64 processes
 
 	if (argc == 2) {
 		ULONG64 iBytesMoved;
@@ -111,21 +117,28 @@ int __cdecl _tmain( __in int argc, __in _TCHAR* argv[], __in _TCHAR* envp[] )
 		err = ImportFileList( argv[1], ppszFileList );
 		if (err == ERROR_SUCCESS) {
 
-			err = CompactFiles( (LPCTSTR*)ppszFileList, &iBytesMoved );
+			err = CompactFiles( (LPCTSTR*)ppszFileList, &iBytesMoved, DefragLogging, NULL );
 			if (err == ERROR_SUCCESS) {
 				
 				// Success
+				DefragLogging( NULL, _T( "\n" ) );
+				DefragLogging( NULL, _T( "Success (%I64u bytes moved)\n" ), iBytesMoved );
 
 			} else {
-				_tprintf( _T( "\nERROR: Error 0x%x\n" ), err );
+				TCHAR szError[255];
+				DefragLogging( NULL, _T( "\n" ) );
+				DefragLogging( NULL, _T( "ERROR: 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
 			}
 		} else {
-			_tprintf( _T( "\nERROR: Error 0x%x reading from file \"%s\"\n" ), err, argv[1] );
+			TCHAR szError[255];
+			DefragLogging( NULL, _T( "\n" ) );
+			DefragLogging( NULL, _T( "ERROR: Failed to read from \"%s\". Error 0x%x \"%s\"\n" ), argv[1], err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
 		}
 		DestroyFileList( ppszFileList );
 
 	} else {
-		_tprintf( _T( "\nERROR: No input specified\n" ) );
+		DefragLogging( NULL, _T( "\n" ) );
+		DefragLogging( NULL, _T( "ERROR: No input specified\n" ) );
 	}
 
 	return err;

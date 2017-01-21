@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+// Callback useful for logging
+typedef VOID( *DefragmentLoggingCallback )(__in LPVOID lpParam, __in LPCTSTR szFmt, ...);
 
 // Defragment single file
 // If the file is not fragmented, the function returns ERROR_SUCCESS and BytesMoved will be zero
@@ -17,7 +19,9 @@ extern "C" {
 // In such case it is recommended to retry at a later time
 DWORD DefragmentFile(
 	_In_ LPCTSTR pszFile,
-	_Out_ PULONG64 piBytesMoved
+	_Out_opt_ PULONG64 piBytesMoved,
+	_In_opt_ DefragmentLoggingCallback fnLogging,
+	_In_opt_ LPVOID lpLoggingParam
 );
 
 // Defragment multiple files and move them close toghether
@@ -27,9 +31,10 @@ DWORD DefragmentFile(
 // In such case it is recommended to retry at a later time
 DWORD CompactFiles(
 	_In_ LPCTSTR *ppszFileList,
-	_Out_ PULONG64 piBytesMoved
+	_Out_opt_ PULONG64 piBytesMoved,
+	_In_opt_ DefragmentLoggingCallback fnLogging,
+	_In_opt_ LPVOID lpLoggingParam
 );
-
 
 #ifdef __cplusplus
 }
