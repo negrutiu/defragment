@@ -76,6 +76,7 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 #endif
 				}
 				return TRUE;
+
 			} else {
 				DWORD err = GetLastError();
 #if _DEBUG || DBG
