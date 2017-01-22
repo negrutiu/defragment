@@ -28,6 +28,8 @@ typedef struct _DEFRAG_FILE {
 //+ DEFRAG_FILES
 typedef struct {
 
+	BOOLEAN Dirty;									/// The data is no longer accurate. A new analysis is required
+
 	/// Logging (optional)
 	DefragmentLoggingCallback fnLogging;
 	LPVOID lpLoggingParam;
@@ -473,6 +475,7 @@ DWORD DefragDataAnalyze( _Inout_ DEFRAG_FILES* Data )
 		ULONG64 StartingVcn, NextLcn = 0, Clusters;
 
 		/// Clear
+		Data->Dirty = FALSE;
 		ZeroMemory( &Data->Analysis, sizeof( Data->Analysis ) );
 
 		/// Files
@@ -585,8 +588,8 @@ DWORD DefragDataDefragment_Compact( _In_ DEFRAG_FILES *Data )
 					/// Advance on disk
 					VolumeLcn += mfd.ClusterCount;
 
-					/// Mark the analysis data as dirty
-					Data->Analysis.Dirty = TRUE;
+					/// Mark the data as dirty
+					Data->Dirty = TRUE;
 
 					/// Stats
 					Data->Defrag.ClusterCount += mfd.ClusterCount;
@@ -621,7 +624,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 	DWORD err = ERROR_SUCCESS;
 	if (Data) {
 
-		if (Data->Analysis.Dirty)
+		if (Data->Dirty)
 			return ERROR_INVALID_DATA;					/// A new analysis is required
 		if (Data->Analysis.FileCount == 0)
 			return ERROR_INVALID_DATA;					/// Nothing to defragment
