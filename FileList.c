@@ -7,12 +7,12 @@
 
 
 //++ FileListAddDirectory
-BOOL FileListAddDirectory( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszDir, _In_ SIZE_T iDirMaxLen, _In_ SIZE_T iDirLen )
+BOOL FileListAddDirectory( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszDir, _In_ size_t iDirMaxLen, _In_ size_t iDirLen )
 {
 	if (pList && pszDir && *pszDir) {
 
 		LPTSTR psz = pszDir + iDirLen;
-		SIZE_T len = iDirMaxLen - iDirLen;
+		size_t len = iDirMaxLen - iDirLen;
 		WIN32_FIND_DATA fd = {0};
 		HANDLE h;
 
@@ -54,7 +54,7 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 					// Directory
 					TCHAR szDir[1024];
 					LPTSTR psz;
-					SIZE_T len;
+					size_t len;
 
 					StringCchCopyEx( szDir, ARRAYSIZE( szDir ), pszFile, &psz, &len, 0 );
 					len = ARRAYSIZE( szDir ) - len;

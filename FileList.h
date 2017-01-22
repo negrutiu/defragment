@@ -9,7 +9,7 @@
 #define FILE_LIST_MAX_COUNT 1024
 
 typedef struct {
-	LPTSTR ppszFiles[FILE_LIST_MAX_COUNT];
+	LPCTSTR ppszFiles[FILE_LIST_MAX_COUNT];
 	LONG Count;
 } FILE_LIST, *PFILE_LIST;
 
