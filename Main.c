@@ -20,12 +20,15 @@ VOID PrintSyntax()
 {
 	_tprintf(
 		_T( "Syntax:\n" )
-		_T( "  Defrag.exe <Command> <File list>\n" )
+		_T( "  Defrag.exe <Command> [Options] <File list>\n" )
 		_T( "\n" )
 		_T( "Commands:\n" )
-		_T( "  /analyze    Analyze files' fragmentation\n" )
+		_T( "  /analyze    Analyze fragmentation\n" )
 		_T( "  /defrag     Defragment individual files\n" )
-		_T( "  /compact    Defragment and move files to a contiguous disk location\n" )
+		_T( "\n" )
+		_T( "Options:\n" )
+		_T( "  /compact    In addition to defragmenting, files are moved close together to a contiguous disk area\n" )
+		_T( "  /simulate   Conduct a dry run. Nothing is actually written to disk\n" )
 		_T( "\n" )
 		_T( "File list:\n" )
 		_T( "  One or more files and/or directories\n" )
@@ -33,8 +36,7 @@ VOID PrintSyntax()
 		_T( "\n" )
 		_T( "Examples:\n" )
 		_T( "  Defrag /analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
-		_T( "  Defrag /defrag  C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
-		_T( "  Defrag /compact C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
+		_T( "  Defrag /defrag /compact /simulate \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
 		_T( "\n" )
 	);
 }
@@ -79,20 +81,55 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 #define COMMAND_NONE		0
 #define COMMAND_ANALYZE		1
 #define COMMAND_DEFRAG		2
-#define COMMAND_COMPACT		3
 
 	DWORD err = ERROR_SUCCESS;
 	ULONG iCommand = COMMAND_NONE;
-	int i;
+	ULONG iDefragFlags = 0;
+	int i, i0;
 	FILE_LIST FileList = {0};
 
 	PrintCopyright();
 
+	/// Try to determine whether the first argument is the executable name, or a command (starting with / or -)
+	/// If *not* a command, we'll skip it
+	i0 = 0;
+	if (argc > 0 && (argv[0][0] != _T( '/' )) && (argv[0][0] != _T( '-' )))
+		i0 = 1;
+
 	// Command line
-	for (i = 0; i < argc; i++)
+	for (i = i0; i < argc; i++)
 	{
+		if ((iCommand == COMMAND_NONE) && (
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/analyze" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-analyze" ), -1 ) == CSTR_EQUAL))
+		{
+			iCommand = COMMAND_ANALYZE;
+
+		} else if ((iCommand == COMMAND_NONE) && (
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defrag" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defrag" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defragment" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defragment" ), -1 ) == CSTR_EQUAL))
+		{
+			iCommand = COMMAND_DEFRAG;
+
+		} else if ((iCommand == COMMAND_DEFRAG) && (
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/compact" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-compact" ), -1 ) == CSTR_EQUAL))
+		{
+			iDefragFlags |= DEFRAG_FLAG_COMPACT;
+
+		} else if ((iCommand == COMMAND_DEFRAG) && (
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/simulate" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-simulate" ), -1 ) == CSTR_EQUAL))
+		{
+			iDefragFlags |= DEFRAG_FLAG_SIMULATE;
+
+		} else {
+
 		if (iCommand != COMMAND_NONE) {
 			
+				/// File list
 			if (argv[i][0] == _T( '@' )) {
 				FileListAddCatalog( &FileList, argv[i] + 1 );
 			} else {
@@ -100,26 +137,6 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			}
 
 		} else {
-
-			if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/analyze" ), -1 ) == CSTR_EQUAL ||
-				CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-analyze" ), -1 ) == CSTR_EQUAL)
-			{
-				iCommand = COMMAND_ANALYZE;
-			}
-			else if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defrag" ), -1 ) == CSTR_EQUAL ||
-					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defrag" ), -1 ) == CSTR_EQUAL ||
-					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/defragment" ), -1 ) == CSTR_EQUAL ||
-					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-defragment" ), -1 ) == CSTR_EQUAL)
-			{
-				iCommand = COMMAND_DEFRAG;
-			}
-			else if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/compact" ), -1 ) == CSTR_EQUAL ||
-					 CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-compact" ), -1 ) == CSTR_EQUAL)
-			{
-				iCommand = COMMAND_COMPACT;
-			}
-			else
-			{
 				_tprintf( _T( "Warning: Unknown command \"%s\"\n" ), argv[i] );
 			}
 		}
@@ -140,16 +157,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			break;
 
 		case COMMAND_DEFRAG:
-			err = DefragDefragmentFiles( FileList.ppszFiles, FALSE, NULL, DefragLogging, NULL );
-			if (TRUE) {
-				TCHAR szError[255];
-				_tprintf( _T( "\n" ) );
-				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
-			}
-			break;
-
-		case COMMAND_COMPACT:
-			err = DefragDefragmentFiles( FileList.ppszFiles, TRUE, NULL, DefragLogging, NULL );
+			err = DefragDefragmentFiles( FileList.ppszFiles, iDefragFlags, NULL, DefragLogging, NULL );
 			if (TRUE) {
 				TCHAR szError[255];
 				_tprintf( _T( "\n" ) );

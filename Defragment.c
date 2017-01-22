@@ -29,6 +29,7 @@ typedef struct _DEFRAG_FILE {
 typedef struct {
 
 	BOOLEAN Dirty;									/// The data is no longer accurate. A new analysis is required
+	ULONG DefragFlags;								/// Combination of DEFRAG_FLAG_*
 
 	/// Logging (optional)
 	DefragmentLoggingCallback fnLogging;
@@ -44,7 +45,6 @@ typedef struct {
 
 	/// File list
 	DEFRAG_FILE *Files;
-	BOOL CompactFiles;
 
 	/// Analysis
 	DEFRAG_ANALYSIS Analysis;
@@ -567,10 +567,15 @@ DWORD DefragDataDefragment_Compact( _In_ DEFRAG_FILES *Data )
 				mfd.StartingLcn.QuadPart = VolumeLcn;
 				mfd.ClusterCount = (DWORD)(f->Fragments->Extents[i].NextVcn.QuadPart - mfd.StartingVcn.QuadPart);
 
+				if (!(Data->DefragFlags & DEFRAG_FLAG_SIMULATE)) {
 				err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
+				} else {
+					err = ERROR_SUCCESS;
+				}
 				Log( Data,
-					_T( "  #%04u: Move %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x\n" ),
+					_T( "  #%04u: %s %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x\n" ),
 					i + 1,
+					Data->DefragFlags & DEFRAG_FLAG_SIMULATE ? _T( "Simulate move" ) : _T( "Move" ),
 					mfd.ClusterCount,
 					mfd.ClusterCount * f->ClusterSize,
 					mfd.StartingVcn.QuadPart,
@@ -630,7 +635,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 			return ERROR_INVALID_DATA;					/// Nothing to defragment
 
 		if (Data->Analysis.MaxFileFragments > 1 ||		/// There are fragmented files
-			(Data->CompactFiles && Data->Analysis.DiffuseExtentCount > 0))		/// There are diffuse (not compact) fragments
+			((Data->DefragFlags & DEFRAG_FLAG_COMPACT) && Data->Analysis.DiffuseExtentCount > 0))		/// There are diffuse (not compact) fragments
 		{
 			ZeroMemory( &Data->Defrag, sizeof( Data->Defrag ) );
 
@@ -663,7 +668,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 			if (err == ERROR_SUCCESS) {
 
 				// Defragment
-				if (Data->CompactFiles) {
+				if (Data->DefragFlags & DEFRAG_FLAG_COMPACT) {
 					err = DefragDataDefragment_Compact( Data );
 				} else {
 					err = DefragDataDefragment_Individual( Data );
@@ -723,7 +728,7 @@ DWORD DefragAnalyzeFiles( _In_ LPCTSTR *ppszFiles, _Out_opt_ PDEFRAG_ANALYSIS pO
 
 
 //++ DefragDefragmentFiles
-DWORD DefragDefragmentFiles( _In_ LPCTSTR *ppszFiles, _In_ BOOL bCompact, _Out_opt_ PDEFRAG_DEFRAGMENT pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
+DWORD DefragDefragmentFiles( _In_ LPCTSTR *ppszFiles, _In_ ULONG iFlags, _Out_opt_ PDEFRAG_DEFRAGMENT pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
 {
 	DWORD err = ERROR_SUCCESS;
 	if (ppszFiles) {
@@ -733,15 +738,9 @@ DWORD DefragDefragmentFiles( _In_ LPCTSTR *ppszFiles, _In_ BOOL bCompact, _Out_o
 		if (pOut)
 			ZeroMemory( pOut, sizeof( *pOut ) );
 
+		Data.DefragFlags = iFlags;
 		Data.fnLogging = fnLogging;
 		Data.lpLoggingParam = lpLoggingParam;
-		Data.CompactFiles = bCompact;
-
-		//! TODO
-		if (!bCompact) {
-			Log( &Data, _T( "TODO: Defragment individual files\n" ), 0 );
-			return ERROR_NOT_SUPPORTED;
-		}
 
 		err = DefragDataCreate( &Data, ppszFiles );
 		if (err == ERROR_SUCCESS) {

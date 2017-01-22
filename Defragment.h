@@ -44,6 +44,10 @@ DWORD DefragAnalyzeFiles(
 );
 
 
+#define DEFRAG_FLAG_COMPACT			(1 << 0)				/// In addition to defragmenting, move the files close together to a contiguous disk area
+#define DEFRAG_FLAG_SIMULATE		(1 << 1)				/// Dry run, nothing is actually written to disk
+
+
 //+ Defragment files
 /// All files must be located on the same volume
 /// If files are already defragmented, the function returns ERROR_SUCCESS and pOut will indicate no data being moved
@@ -51,7 +55,7 @@ DWORD DefragAnalyzeFiles(
 /// In such case it is recommended to retry later
 DWORD DefragDefragmentFiles(
 	_In_ LPCTSTR *ppszFiles,								/// Array of LPCTSTRs. The last entry must be NULL
-	_In_ BOOL bCompact,										/// If TRUE, all files will be compacted (moved together to a contiguous disk location)
+	_In_ ULONG iFlags,										/// Combination of DEFRAG_FLAG_*
 	_Out_opt_ PDEFRAG_DEFRAGMENT pOut,
 	_In_opt_ DefragmentLoggingCallback fnLogging,
 	_In_opt_ LPVOID lpLoggingParam
