@@ -93,7 +93,7 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 			///_tprintf( _T( "----- {%hs} Start Defragmenting {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
 			if (*pbInteractive) {
 
-				TCHAR ch;
+				TCHAR szInput[256];
 				PDEFRAG_OPTIONS pOptions = (PDEFRAG_OPTIONS)pParam1;
 				assert( pOptions );
 
@@ -111,23 +111,17 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 					
 					_tprintf( _T( "Action (Compact:%s, Simulate:%s) : " ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ) );
 					
-					ch = _gettche();
-					if (ch == 0 || ch == 0xe0)
-						ch = _gettche();		/// When reading a function key or an arrow key, each function must be called twice; the first call returns 0 or 0xE0, and the second call returns the actual key code
-					if (_istupper( ch ))
-						ch = (TCHAR)tolower( ch );
-					_tprintf( _T( "\n" ) );
-
-					if (ch == _T( 'c' )) {
+					_tscanf_s( _T( "%255s" ), szInput, 256 );
+					if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "c" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
-					} else if (ch == _T( 's' )) {
+					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "s" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
-					} else if (ch == _T( 'd' )) {
+					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "d" ), -1 ) == CSTR_EQUAL) {
 						return TRUE;	/// Continue defragmenting
-					} else if (ch == _T( 'q' )) {
+					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "q" ), -1 ) == CSTR_EQUAL) {
 						return FALSE;	/// Abort everything
 					} else {
-						_tprintf( _T( "  Unknown action \"%c\"\n" ), ch );
+						_tprintf( _T( "  Unknown action \"%s\"\n" ), szInput );
 					}
 				}
 			}
@@ -252,5 +246,13 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 	}
 
 	FileListDestroy( &FileList );
+
+	// Pause
+	if (bInteractive && (err != ERROR_REQUEST_ABORTED)) {
+		_tprintf( _T( "Press any key to exit . . . " ) );
+		_gettch();
+		_tprintf( _T( "\n" ) );
+	}
+
 	return err;
 }
