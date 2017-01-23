@@ -186,6 +186,9 @@
     <Xml Include="Res\Compatibility.xml" />
     <Xml Include="Res\Manifest.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\Rubik.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
