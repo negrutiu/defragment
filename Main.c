@@ -29,6 +29,7 @@ VOID PrintSyntax()
 		_T( "Options:\n" )
 		_T( "  /compact    In addition to defragmenting, files are moved close together to a contiguous disk area\n" )
 		_T( "  /simulate   Conduct a dry run. Nothing is actually written to disk\n" )
+		_T( "  /prompt     Enable interactive mode. Prompt before defragmenting\n" )
 		_T( "\n" )
 		_T( "File list:\n" )
 		_T( "  One or more files and/or directories\n" )
@@ -37,6 +38,7 @@ VOID PrintSyntax()
 		_T( "Examples:\n" )
 		_T( "  Defrag /analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
 		_T( "  Defrag /defrag /compact /simulate \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
+		_T( "  Defrag /defrag /prompt \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
 		_T( "\n" )
 	);
 }
@@ -75,6 +77,72 @@ VOID DefragLogging( _In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ... )
 }
 
 
+//++ DefragTrace
+BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _In_opt_ LPVOID pParam2 )
+{
+	LPBOOL pbInteractive = (LPBOOL)lpParam;
+	switch (iStep)
+	{
+		case DEFRAG_STEP_BEFORE_ANALYSIS:
+			///_tprintf( _T( "----- {%hs} Start Analysis...\n" ), __FUNCTION__ );
+			break;
+		case DEFRAG_STEP_ANALYZE_FILE:
+			///_tprintf( _T( "----- {%hs} Analyze %s\n" ), __FUNCTION__, (LPCTSTR)pParam1 );
+			break;
+		case DEFRAG_STEP_BEFORE_DEFRAGMENT:
+			///_tprintf( _T( "----- {%hs} Start Defragmenting {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
+			if (*pbInteractive) {
+
+				TCHAR ch;
+				PDEFRAG_OPTIONS pOptions = (PDEFRAG_OPTIONS)pParam1;
+				assert( pOptions );
+
+				_tprintf(
+					_T( "\n" )
+					_T( "Actions:\n" )
+					_T( "  c   Toggle file compacting ON or OFF\n" )
+					_T( "  s   Toggle simulation ON or OFF\n" )
+					_T( "  d   Start defragmenting files\n" )
+					_T( "  q   Quit\n" )
+					_T( "\n" )
+				);
+
+				while( TRUE ) {
+					
+					_tprintf( _T( "Action (Compact:%s, Simulate:%s) : " ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ) );
+					
+					ch = _gettche();
+					if (ch == 0 || ch == 0xe0)
+						ch = _gettche();		/// When reading a function key or an arrow key, each function must be called twice; the first call returns 0 or 0xE0, and the second call returns the actual key code
+					if (_istupper( ch ))
+						ch = (TCHAR)tolower( ch );
+					_tprintf( _T( "\n" ) );
+
+					if (ch == _T( 'c' )) {
+						pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
+					} else if (ch == _T( 's' )) {
+						pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
+					} else if (ch == _T( 'd' )) {
+						return TRUE;	/// Continue defragmenting
+					} else if (ch == _T( 'q' )) {
+						return FALSE;	/// Abort everything
+					} else {
+						_tprintf( _T( "  Unknown action \"%c\"\n" ), ch );
+					}
+				}
+			}
+			break;
+		case DEFRAG_STEP_DEFRAGMENT_FILE:
+			///_tprintf( _T( "----- {%hs} Defragment %s (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+			break;
+		case DEFRAG_STEP_DEFRAGMENT_EXTENT:
+			///_tprintf( _T( "----- {%hs} Defragment %s extent (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+			break;
+	}
+	return TRUE;
+}
+
+
 //++ _tmain
 int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 {
@@ -84,7 +152,8 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 	DWORD err = ERROR_SUCCESS;
 	ULONG iCommand = COMMAND_NONE;
-	ULONG iDefragFlags = 0;
+	DEFRAG_OPTIONS DefragOpt = {0};
+	BOOL bInteractive = FALSE;
 	int i, i0;
 	FILE_LIST FileList = {0};
 
@@ -114,16 +183,22 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			iCommand = COMMAND_DEFRAG;
 
 		} else if ((iCommand == COMMAND_DEFRAG) && (
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/prompt" ), -1 ) == CSTR_EQUAL ||
+			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-prompt" ), -1 ) == CSTR_EQUAL))
+		{
+			bInteractive = TRUE;
+
+		} else if ((iCommand == COMMAND_DEFRAG) && (
 			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/compact" ), -1 ) == CSTR_EQUAL ||
 			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-compact" ), -1 ) == CSTR_EQUAL))
 		{
-			iDefragFlags |= DEFRAG_FLAG_COMPACT;
+			DefragOpt.Flags |= DEFRAG_FLAG_COMPACT;
 
 		} else if ((iCommand == COMMAND_DEFRAG) && (
 			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "/simulate" ), -1 ) == CSTR_EQUAL ||
 			CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "-simulate" ), -1 ) == CSTR_EQUAL))
 		{
-			iDefragFlags |= DEFRAG_FLAG_SIMULATE;
+			DefragOpt.Flags |= DEFRAG_FLAG_SIMULATE;
 
 		} else {
 
@@ -145,10 +220,15 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 
 	// Execute command
+	DefragOpt.fnLogging = DefragLogging;
+	DefragOpt.lpLoggingParam = NULL;
+	DefragOpt.fnTracing = DefragTrace;
+	DefragOpt.lpTracingParam = &bInteractive;
+
 	switch (iCommand)
 	{
 		case COMMAND_ANALYZE:
-			err = DefragAnalyzeFiles( FileList.ppszFiles, NULL, DefragLogging, NULL );
+			err = DefragAnalyzeFiles( FileList.ppszFiles, &DefragOpt, NULL );
 			if (TRUE) {
 				TCHAR szError[255];
 				_tprintf( _T( "\n" ) );
@@ -157,7 +237,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			break;
 
 		case COMMAND_DEFRAG:
-			err = DefragDefragmentFiles( FileList.ppszFiles, iDefragFlags, NULL, DefragLogging, NULL );
+			err = DefragDefragmentFiles( FileList.ppszFiles, &DefragOpt, NULL );
 			if (TRUE) {
 				TCHAR szError[255];
 				_tprintf( _T( "\n" ) );

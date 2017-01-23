@@ -30,7 +30,8 @@ typedef struct _DEFRAG_FILE {
 typedef struct {
 
 	BOOLEAN Dirty;									/// The data is no longer accurate. A new analysis is required
-	ULONG DefragFlags;								/// Combination of DEFRAG_FLAG_*
+
+	DEFRAG_OPTIONS Options;							/// Options for analysis and defragmentation
 
 	/// Logging (optional)
 	DefragmentLoggingCallback fnLogging;
@@ -59,9 +60,13 @@ typedef struct {
 //+ Log
 #define Log(__pData, __Fmt, ...) \
     { \
-		if ((__pData)->fnLogging) \
-			(__pData)->fnLogging( (__pData)->lpLoggingParam, __Fmt, __VA_ARGS__ ); \
+		if ((__pData)->Options.fnLogging) \
+			(__pData)->Options.fnLogging( (__pData)->Options.lpLoggingParam, __Fmt, __VA_ARGS__ ); \
 	}
+
+//+ Trace
+#define Trace(__pData, __iStep, __pParam1, __pParam2) \
+    ((__pData)->Options.fnTracing ? (__pData)->Options.fnTracing((__pData)->Options.lpTracingParam, __iStep, (LPVOID)__pParam1, (LPVOID)__pParam2) : TRUE)
 
 
 //+ ValidHandle
@@ -501,14 +506,21 @@ DWORD DefragDataAnalyze( _Inout_ DEFRAG_FILES* Data )
 		Data->Dirty = FALSE;
 		ZeroMemory( &Data->Analysis, sizeof( Data->Analysis ) );
 
+		if (!Trace( Data, DEFRAG_STEP_BEFORE_ANALYSIS, NULL, NULL ))
+			return ERROR_REQUEST_ABORTED;
+
 		/// Files
 		for (f = Data->Files; f; f = f->Next) {
+
+			if (!Trace( Data, DEFRAG_STEP_ANALYZE_FILE, f->Path, NULL ))
+				return ERROR_REQUEST_ABORTED;
 
 			Log( Data, _T( "Analyze %s\n" ), f->Path );
 
 			/// Refresh fragmentation data
 			if (f->Fragments)
 				HeapFree( GetProcessHeap(), 0, f->Fragments );
+
 			err = DefragGetFileRetrievalPointers( f->Handle, &f->Fragments, &f->FragmentsSize );
 			if (err == ERROR_SUCCESS) {
 
@@ -574,7 +586,7 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 	assert( Data->Volume.Bitmap );
 
 	// Search for a new location (Compact == TRUE)
-	if (Data->DefragFlags & DEFRAG_FLAG_COMPACT) {
+	if (Data->Options.Flags & DEFRAG_FLAG_COMPACT) {
 		err = DefragBitmapFindUnused( Data->Volume.Bitmap, Data->Analysis.ClusterCount, &VolumeLcn );
 		if (err != ERROR_SUCCESS) {
 			Log( Data, _T( "  Not enough free space to defragment\n" ), 0 );
@@ -586,12 +598,18 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 	Log( Data, _T( "\n" ), 0 );
 	for (f = Data->Files; f && (err == ERROR_SUCCESS); f = f->Next) {
 
+		{
+			LONG64 FileSize = f->ClusterCount * f->ClusterSize;
+			if (!Trace( Data, DEFRAG_STEP_DEFRAGMENT_FILE, f->Path, &FileSize ))
+				return ERROR_REQUEST_ABORTED;
+		}
+
 		Log( Data, _T( "Defragment %s\n" ), f->Path );
 		if (f->Fragments->ExtentCount > 1)
 			Data->Defrag.FileCount++;
 
 		// Search for a new location (Compact == FALSE)
-		if (!(Data->DefragFlags & DEFRAG_FLAG_COMPACT)) {
+		if (!(Data->Options.Flags & DEFRAG_FLAG_COMPACT)) {
 			err = DefragBitmapFindUnused( Data->Volume.Bitmap, f->ClusterCount, &VolumeLcn );
 			if (err != ERROR_SUCCESS) {
 				Log( Data, _T( "  Not enough free space to defragment\n" ), 0 );
@@ -608,7 +626,13 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 			mfd.StartingLcn.QuadPart = VolumeLcn;
 			mfd.ClusterCount = (DWORD)(f->Fragments->Extents[i].NextVcn.QuadPart - mfd.StartingVcn.QuadPart);
 
-			if (Data->DefragFlags & DEFRAG_FLAG_SIMULATE) {
+			{
+				LONG64 ExtentSize = mfd.ClusterCount * f->ClusterSize;
+				if (!Trace( Data, DEFRAG_STEP_DEFRAGMENT_EXTENT, f->Path, &ExtentSize ))
+					return ERROR_REQUEST_ABORTED;
+			}
+
+			if (Data->Options.Flags & DEFRAG_FLAG_SIMULATE) {
 				err = ERROR_SUCCESS;	/// Don't write to disk
 			} else {
 				err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
@@ -624,7 +648,7 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 				mfd.StartingLcn.QuadPart,
 				mfd.StartingLcn.QuadPart + mfd.ClusterCount,
 				err,
-				Data->DefragFlags & DEFRAG_FLAG_SIMULATE ? _T( " (simulated)" ) : _T( "" )
+				Data->Options.Flags & DEFRAG_FLAG_SIMULATE ? _T( " (simulated)" ) : _T( "" )
 			);
 
 			if (err == ERROR_SUCCESS) {
@@ -662,17 +686,26 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 		if (Data->Analysis.FileCount == 0)
 			return ERROR_INVALID_DATA;					/// Nothing to defragment
 
+		if (Data->Analysis.MaxFileFragments <= 1 && Data->Analysis.DiffuseExtentCount == 0) {
+			Log( Data, _T( "  Nothing to defragment.\n" ), 0 );
+			return ERROR_SUCCESS;
+		}
+
+		if (!Trace( Data, DEFRAG_STEP_BEFORE_DEFRAGMENT, &Data->Options, NULL ))
+			return ERROR_REQUEST_ABORTED;
+
 		if (Data->Analysis.MaxFileFragments > 1 ||														/// There are fragmented files
-			((Data->DefragFlags & DEFRAG_FLAG_COMPACT) && Data->Analysis.DiffuseExtentCount > 0))		/// There are diffuse (not compact) fragments
+			((Data->Options.Flags & DEFRAG_FLAG_COMPACT) && Data->Analysis.DiffuseExtentCount > 0))		/// There are diffuse (not compact) fragments
 		{
 			ZeroMemory( &Data->Defrag, sizeof( Data->Defrag ) );
 
 			Log( Data, _T( "\n" ), 0 );
 #if _DEBUG || DBG
-			Log( Data, _T( "[d] Compact: %s\n" ), Data->DefragFlags & DEFRAG_FLAG_COMPACT ? _T( "TRUE" ) : _T( "FALSE" ) );
-			Log( Data, _T( "[d] Simulate: %s\n" ), Data->DefragFlags & DEFRAG_FLAG_SIMULATE ? _T( "TRUE" ) : _T( "FALSE" ) );
+			Log( Data, _T( "[d] Compact: %s\n" ), Data->Options.Flags & DEFRAG_FLAG_COMPACT ? _T( "TRUE" ) : _T( "FALSE" ) );
+			Log( Data, _T( "[d] Simulate: %s\n" ), Data->Options.Flags & DEFRAG_FLAG_SIMULATE ? _T( "TRUE" ) : _T( "FALSE" ) );
 			Log( Data, _T( "\n" ), 0 );
 #endif
+			
 			Log( Data, _T( "Read %s volume bitmap\n" ), Data->Volume.Name );
 
 			// Open volume (once)
@@ -715,7 +748,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 				Log( Data, _T( "  Error 0x%x\n" ), err );
 			}
 		} else {
-			Log( Data, _T( "%s" ), _T( "  Nothing to defragment.\n" ) );
+			Log( Data, _T( "  Nothing to defragment.\n" ), 0 );
 		}
 
 	} else {
@@ -727,15 +760,19 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 
 
 //++ DefragAnalyzeFiles
-DWORD DefragAnalyzeFiles( _In_ LPCTSTR *ppszFiles, _Out_opt_ PDEFRAG_ANALYSIS pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
+DWORD DefragAnalyzeFiles(
+	_In_ LPCTSTR *ppszFiles,
+	_In_opt_ PDEFRAG_OPTIONS pIn,
+	_Out_opt_ PDEFRAG_ANALYSIS pOut
+	)
 {
 	DWORD err = ERROR_SUCCESS;
 	if (ppszFiles) {
 		
 		DEFRAG_FILES Data = {0};
-		Data.fnLogging = fnLogging;
-		Data.lpLoggingParam = lpLoggingParam;
 
+		if (pIn)
+			CopyMemory( &Data.Options, pIn, sizeof( Data.Options ) );
 		if (pOut)
 			ZeroMemory( pOut, sizeof( *pOut ) );
 
@@ -757,19 +794,21 @@ DWORD DefragAnalyzeFiles( _In_ LPCTSTR *ppszFiles, _Out_opt_ PDEFRAG_ANALYSIS pO
 
 
 //++ DefragDefragmentFiles
-DWORD DefragDefragmentFiles( _In_ LPCTSTR *ppszFiles, _In_ ULONG iFlags, _Out_opt_ PDEFRAG_DEFRAGMENT pOut, _In_opt_ DefragmentLoggingCallback fnLogging, _In_opt_ LPVOID lpLoggingParam )
+DWORD DefragDefragmentFiles(
+	_In_ LPCTSTR *ppszFiles,
+	_In_opt_ PDEFRAG_OPTIONS pIn,
+	_Out_opt_ PDEFRAG_DEFRAGMENT pOut
+	)
 {
 	DWORD err = ERROR_SUCCESS;
 	if (ppszFiles) {
 
 		DEFRAG_FILES Data = {0};
 
+		if (pIn)
+			CopyMemory( &Data.Options, pIn, sizeof( Data.Options ) );
 		if (pOut)
 			ZeroMemory( pOut, sizeof( *pOut ) );
-
-		Data.DefragFlags = iFlags;
-		Data.fnLogging = fnLogging;
-		Data.lpLoggingParam = lpLoggingParam;
 
 		err = DefragDataCreate( &Data, ppszFiles );
 		if (err == ERROR_SUCCESS) {

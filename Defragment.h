@@ -30,22 +30,38 @@ typedef struct {
 } DEFRAG_DEFRAGMENT, *PDEFRAG_DEFRAGMENT;
 
 
+//+ struct DEFRAG_OPTIONS
+#define DEFRAG_FLAG_COMPACT			(1 << 0)	/// In addition to defragmenting, move the files close together to a contiguous disk area
+#define DEFRAG_FLAG_SIMULATE		(1 << 1)	/// Dry run, nothing is actually written to disk
+
 /// Logging Callback
 typedef VOID( *DefragmentLoggingCallback )(_In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ...);
+
+/// Tracing Callback
+#define DEFRAG_STEP_BEFORE_ANALYSIS		1		/// Analysis is about to start			{ pParam1:NULL, pParam2:NULL }
+#define DEFRAG_STEP_ANALYZE_FILE		2		/// Called for each analysed file		{ pParam1:(LPCTSTR)pszFile, pParam2:NULL }
+#define DEFRAG_STEP_BEFORE_DEFRAGMENT	3		/// Defragmenting is about to start		{ pParam1:(PDEFRAG_OPTIONS)pOptions, pParam2:NULL }
+#define DEFRAG_STEP_DEFRAGMENT_FILE		4		/// Called for each file				{ pParam1:(LPCTSTR)pszFile, pParam2:(PLONG64)piFileSize }
+#define DEFRAG_STEP_DEFRAGMENT_EXTENT	5		/// Called for each file fragment		{ pParam1:(LPCTSTR)pszFile, pParam2:(PLONG64)piExtentSize }
+typedef BOOL( *DefragmentTraceCallback )(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _In_opt_ LPVOID pParam2);		/// If returns FALSE, all operations will abort
+
+typedef struct {
+	ULONG Flags;								/// Combination of DEFRAG_FLAG_*
+	DefragmentLoggingCallback fnLogging;		/// Optional logging function
+	LPVOID lpLoggingParam;						/// Optional logging function custom parameter
+	DefragmentTraceCallback fnTracing;			/// Optional tracing function
+	LPVOID lpTracingParam;						/// Optional tracing function custom parameter
+} DEFRAG_OPTIONS, *PDEFRAG_OPTIONS;	
+
 
 
 //+ Analyze fragmentation
 /// All files must be located on the same volume
 DWORD DefragAnalyzeFiles(
 	_In_ LPCTSTR *ppszFiles,								/// Array of LPCTSTRs. The last entry must be NULL
-	_Out_opt_ PDEFRAG_ANALYSIS pOut,
-	_In_opt_ DefragmentLoggingCallback fnLogging,
-	_In_opt_ LPVOID lpLoggingParam
+	_In_opt_ PDEFRAG_OPTIONS pIn,
+	_Out_opt_ PDEFRAG_ANALYSIS pOut
 );
-
-
-#define DEFRAG_FLAG_COMPACT			(1 << 0)				/// In addition to defragmenting, move the files close together to a contiguous disk area
-#define DEFRAG_FLAG_SIMULATE		(1 << 1)				/// Dry run, nothing is actually written to disk
 
 
 //+ Defragment files
@@ -55,10 +71,8 @@ DWORD DefragAnalyzeFiles(
 /// In such case it is recommended to retry later
 DWORD DefragDefragmentFiles(
 	_In_ LPCTSTR *ppszFiles,								/// Array of LPCTSTRs. The last entry must be NULL
-	_In_ ULONG iFlags,										/// Combination of DEFRAG_FLAG_*
-	_Out_opt_ PDEFRAG_DEFRAGMENT pOut,
-	_In_opt_ DefragmentLoggingCallback fnLogging,
-	_In_opt_ LPVOID lpLoggingParam
+	_In_opt_ PDEFRAG_OPTIONS pIn,
+	_Out_opt_ PDEFRAG_DEFRAGMENT pOut
 );
 
 
