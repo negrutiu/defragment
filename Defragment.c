@@ -31,12 +31,6 @@ typedef struct {
 
 	BOOLEAN Dirty;									/// The data is no longer accurate. A new analysis is required
 
-	DEFRAG_OPTIONS Options;							/// Options for analysis and defragmentation
-
-	/// Logging (optional)
-	DefragmentLoggingCallback fnLogging;
-	LPVOID lpLoggingParam;
-
 	/// Volume information
 	struct {
 		TCHAR Name[20];								/// "\\.\X:"
@@ -52,6 +46,7 @@ typedef struct {
 	DEFRAG_ANALYSIS Analysis;
 
 	/// Defragment
+	DEFRAG_OPTIONS Options;							/// Options for analysis and defragmentation
 	DEFRAG_DEFRAGMENT Defrag;
 
 } DEFRAG_FILES;
