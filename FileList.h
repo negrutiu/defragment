@@ -6,10 +6,10 @@
 #ifndef _FILELIST_H_
 #define _FILELIST_H_
 
-#define FILE_LIST_MAX_COUNT 1024
+#define FILE_LIST_MAX_COUNT 10240
 
 typedef struct {
-	LPCTSTR ppszFiles[FILE_LIST_MAX_COUNT];
+	LPCTSTR ppszFiles[FILE_LIST_MAX_COUNT + 1];
 	LONG Count;
 } FILE_LIST, *PFILE_LIST;
 

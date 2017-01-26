@@ -593,6 +593,9 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 	Log( Data, _T( "\n" ), 0 );
 	for (f = Data->Files; f && (err == ERROR_SUCCESS); f = f->Next) {
 
+		if (f->Fragments->ExtentCount == 0 || f->ClusterCount == 0)
+			continue;
+
 		{
 			LONG64 FileSize = f->ClusterCount * f->ClusterSize;
 			if (!Trace( Data, DEFRAG_STEP_DEFRAGMENT_FILE, f->Path, &FileSize ))
@@ -600,8 +603,7 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 		}
 
 		Log( Data, _T( "Defragment %s\n" ), f->Path );
-		if (f->Fragments->ExtentCount > 1)
-			Data->Defrag.FileCount++;
+		Data->Defrag.FileCount++;
 
 		// Search for a new location (Compact == FALSE)
 		if (!(Data->Options.Flags & DEFRAG_FLAG_COMPACT)) {
@@ -631,7 +633,7 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 				err = ERROR_SUCCESS;	/// Don't write to disk
 			} else {
 				err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
-			}
+					}
 
 			Log( Data,
 				_T( "  #%04u: Move %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x%s\n" ),

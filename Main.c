@@ -149,9 +149,16 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 	DEFRAG_OPTIONS DefragOpt = {0};
 	BOOL bInteractive = FALSE;
 	int i, i0;
-	FILE_LIST FileList = {0};
+	PFILE_LIST pFileList = NULL;
 
 	PrintCopyright();
+
+	/// Allocate data
+	pFileList = (PFILE_LIST)HeapAlloc( GetProcessHeap(), 0, sizeof( *pFileList ) );
+	if (!pFileList)
+		return GetLastError();
+	pFileList->Count = 0;
+	pFileList->ppszFiles[0] = NULL;
 
 	/// Try to determine whether the first argument is the executable name, or a command (starting with / or -)
 	/// If *not* a command, we'll skip it
@@ -200,9 +207,9 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			
 				/// File list
 			if (argv[i][0] == _T( '@' )) {
-				FileListAddCatalog( &FileList, argv[i] + 1 );
+				FileListAddCatalog( pFileList, argv[i] + 1 );
 			} else {
-				FileListAddFile( &FileList, argv[i] );
+				FileListAddFile( pFileList, argv[i] );
 			}
 
 		} else {
@@ -222,7 +229,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 	switch (iCommand)
 	{
 		case COMMAND_ANALYZE:
-			err = DefragAnalyzeFiles( FileList.ppszFiles, &DefragOpt, NULL );
+			err = DefragAnalyzeFiles( pFileList->ppszFiles, &DefragOpt, NULL );
 			if (TRUE) {
 				TCHAR szError[255];
 				_tprintf( _T( "\n" ) );
@@ -231,7 +238,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			break;
 
 		case COMMAND_DEFRAG:
-			err = DefragDefragmentFiles( FileList.ppszFiles, &DefragOpt, NULL );
+			err = DefragDefragmentFiles( pFileList->ppszFiles, &DefragOpt, NULL );
 			if (TRUE) {
 				TCHAR szError[255];
 				_tprintf( _T( "\n" ) );
@@ -245,7 +252,8 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			_tprintf( _T( "ERROR: Invalid command\n" ) );
 	}
 
-	FileListDestroy( &FileList );
+	FileListDestroy( pFileList );
+	HeapFree( GetProcessHeap(), 0, pFileList );
 
 	// Pause
 	if (bInteractive && (err != ERROR_REQUEST_ABORTED)) {
