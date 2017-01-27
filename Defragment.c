@@ -633,7 +633,7 @@ DWORD DefragDataDefragmentImpl( _In_ DEFRAG_FILES *Data )
 				err = ERROR_SUCCESS;	/// Don't write to disk
 			} else {
 				err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
-					}
+			}
 
 			Log( Data,
 				_T( "  #%04u: Move %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x%s\n" ),
@@ -680,10 +680,10 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 
 		if (Data->Dirty)
 			return ERROR_INVALID_DATA;					/// A new analysis is required
-		if (Data->Analysis.FileCount == 0)
-			return ERROR_INVALID_DATA;					/// Nothing to defragment
 
-		if (Data->Analysis.MaxFileFragments <= 1 && Data->Analysis.DiffuseExtentCount == 0) {
+		if (Data->Analysis.FileCount == 0 ||
+			(Data->Analysis.MaxFileFragments <= 1 && Data->Analysis.DiffuseExtentCount == 0))
+		{
 			Log( Data, _T( "  Nothing to defragment.\n" ), 0 );
 			return ERROR_SUCCESS;
 		}
