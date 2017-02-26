@@ -49,7 +49,7 @@ typedef BOOL( *DefragmentTraceCallback )(_In_ LPVOID lpParam, _In_ int iStep, _I
 
 typedef struct {
 	ULONG Flags;								/// Combination of DEFRAG_FLAG_*
-	ULONG64 TargetFragmentCount;				/// Used with DEFRAG_FLAG_FRAGMENT. Each file will be broken into this many fragments
+	ULONG TargetFragmentCount;					/// Used with DEFRAG_FLAG_FRAGMENT. Each file will be broken into this many fragments
 	DefragmentLoggingCallback fnLogging;		/// Optional logging function
 	LPVOID lpLoggingParam;						/// Optional logging function custom parameter
 	DefragmentTraceCallback fnTracing;			/// Optional tracing function

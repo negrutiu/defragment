@@ -179,6 +179,63 @@ DWORD DefragGetVolumeBitmap(
 }
 
 
+//++ DefragBitmapFindMaxUnused
+/// Search for the largest available disk area
+DWORD DefragBitmapFindMaxUnused( _In_ VOLUME_BITMAP_BUFFER *pBitmap, _Out_ PLONG64 pLcn, _Out_ PLONG64 pSize )
+{
+	DWORD err = ERROR_SUCCESS;
+
+	if (pLcn)
+		*pLcn = 0;
+	if (pSize)
+		*pSize = 0;
+
+	if (pBitmap && pBitmap->BitmapSize.QuadPart && pLcn && pSize) {
+
+		/// Inside the volume bitmap each bit represents one cluster
+		/// For improved performance, we'll be working with bytes (groups of eight cluster)
+		LONG64 i;
+		LONG64 MaxLcnStart = 0, MaxLcnLen = 0;
+		LONG64 CurLcnStart = 0, CurLcnLen = 0;
+		LONG64 BitmapTotalBytes = pBitmap->BitmapSize.QuadPart / 8;		/// Round up to a multiple of 8
+
+		err = ERROR_NOT_FOUND;
+		for (i = 0; i <= BitmapTotalBytes; i++) {
+
+			if ((i != BitmapTotalBytes) &&		/// Last bitmap byte
+				(pBitmap->Buffer[i] == 0))		/// Free bitmap byte
+			{
+				/// Update the current sequence of free clusters
+				if (CurLcnStart == 0)
+					CurLcnStart = i;			/// Start a new sequence
+				CurLcnLen++;
+
+			} else {
+
+				/// Finish the current sequence of free clusters
+				if (CurLcnLen > MaxLcnLen) {
+					MaxLcnStart = CurLcnStart;
+					MaxLcnLen = CurLcnLen;
+					err = ERROR_SUCCESS;
+				}
+				CurLcnStart = 0;
+				CurLcnLen = 0;
+			}
+		}
+
+		/// Return
+		if (err == ERROR_SUCCESS) {
+			*pLcn = pBitmap->StartingLcn.QuadPart + MaxLcnStart * 8;
+			*pSize = MaxLcnLen * 8;
+		}
+
+	} else {
+		err = ERROR_INVALID_PARAMETER;
+	}
+	return err;
+}
+
+
 //++ DefragBitmapFindUnused
 DWORD DefragBitmapFindUnused( _In_ VOLUME_BITMAP_BUFFER *pBitmap, _In_ LONG64 iClusterCount, _Out_ PLONG64 pLcn )
 {
@@ -189,9 +246,9 @@ DWORD DefragBitmapFindUnused( _In_ VOLUME_BITMAP_BUFFER *pBitmap, _In_ LONG64 iC
 
 	if (pBitmap && pBitmap->BitmapSize.QuadPart && iClusterCount && pLcn) {
 
-		/// Our files require a total of FileClusterCount clusters
-		/// Within the volume bitmap, each bit represents a cluster
-		/// We'll be searching the bitmap for (FileClusterCount / 8) empty bytes
+		/// Inside the volume bitmap each bit represents one cluster
+		/// For improved performance, we'll be working with bytes (groups of eight cluster)
+		/// We'll be searching the bitmap for (iClusterCount / 8) consecutive empty bytes
 		/// (Negrutiu)
 		LONG64 i, BitmapSequenceStart, BitmapSequenceLen;
 		LONG64 BitmapTotalBytes;
@@ -252,7 +309,7 @@ DWORD DefragBitmapMarkUsed( _In_ VOLUME_BITMAP_BUFFER *pBitmap, _In_ BOOL bUsed,
 				// Mark used
 				if (bUsed) {
 					pBitmap->Buffer[ByteIndex] |= (1 << BitIndex);
-	} else {
+				} else {
 					pBitmap->Buffer[ByteIndex] &= ~(1 << BitIndex);
 				}
 			}
@@ -542,9 +599,10 @@ DWORD DefragDataAnalyze( _Inout_ DEFRAG_FILES* Data )
 					NextLcn = f->Fragments->Extents[i].Lcn.QuadPart + Clusters;
 
 					Log( Data,
-						_T( "  #%04u: Vcn:0x%04I64x, Lcn:0x%08I64x-0x%08I64x, Clusters:%I64u (%I64u bytes)\n" ),
+						_T( "  #%04u: Vcn:0x%04I64x-0x%04I64x, Lcn:0x%08I64x-0x%08I64x, Clusters:%I64u (%I64u bytes)\n" ),
 						i + 1,
 						StartingVcn,
+						StartingVcn + Clusters,
 						f->Fragments->Extents[i].Lcn.QuadPart,
 						f->Fragments->Extents[i].Lcn.QuadPart + Clusters,
 						Clusters,
@@ -578,26 +636,30 @@ DWORD DefragDataAnalyze( _Inout_ DEFRAG_FILES* Data )
 DWORD DefragDataFragment( _In_ DEFRAG_FILES *Data )
 {
 	DWORD err = ERROR_SUCCESS;
-	LONG64 VolumeLcn = -1;
 	DEFRAG_FILE *f;
-	ULONG i, BytesRead;
+	ULONG BytesRead;
+	ULONG i;
 
 	assert( Data );
 	assert( ValidHandle( Data->Volume.Handle ) );
 	assert( Data->Volume.Bitmap );
 
 	if (Data->Options.TargetFragmentCount < 2) {
-		Log( Data, _T( "  Invalid target fragment count %I64u (must be >= 2)\n" ), Data->Options.TargetFragmentCount );
+		Log( Data, _T( "  Invalid target fragment count %u (must be >= 2)\n" ), Data->Options.TargetFragmentCount );
 		return ERROR_INVALID_PARAMETER;
 	}
-
-	Log( Data, _T( "\n" ), 0 );
-	Log( Data, _T( "TODO: Not implemented yet\n" ), 0 );
-	return ERROR_NOT_SUPPORTED;
 
 	// Iterate files
 	Log( Data, _T( "\n" ), 0 );
 	for (f = Data->Files; f && (err == ERROR_SUCCESS); f = f->Next) {
+
+		ULONG iTargetFragments = min( Data->Options.TargetFragmentCount, (ULONG)f->ClusterCount );
+		ULONG64 iFileClusters = f->ClusterCount;
+
+		LONG   SourceExtentIndex = -1;
+		LONG64 SourceExtentVcn = 0;		/// Virtual cluster number (relative to file)
+		LONG64 SourceExtentLcn = 0;		/// Logical cluster number (relative to volume)
+		LONG64 SourceExtentSize = 0;	/// Number of clusters
 
 		if (f->Fragments->ExtentCount == 0 || f->ClusterCount == 0)
 			continue;
@@ -611,67 +673,103 @@ DWORD DefragDataFragment( _In_ DEFRAG_FILES *Data )
 		Log( Data, _T( "Fragment %s\n" ), f->Path );
 		Data->Move.FileCount++;
 
-		// Search for a new location
-		if (!(Data->Options.Flags & DEFRAG_FLAG_COMPACT)) {
-			err = DefragBitmapFindUnused( Data->Volume.Bitmap, f->ClusterCount, &VolumeLcn );
+		// Target fragments
+		for (i = 0; (i < iTargetFragments) && (err == ERROR_SUCCESS); i++) {
+
+			LONG64 TargetExtentSize = ((i == iTargetFragments - 1) ? iFileClusters : (f->ClusterCount / iTargetFragments));
+			LONG64 TargetExtentLcn, TargetExtentMaxSize;
+
+			/// Find the largest free disk area
+			err = DefragBitmapFindMaxUnused( Data->Volume.Bitmap, &TargetExtentLcn, &TargetExtentMaxSize );
 			if (err != ERROR_SUCCESS) {
-				Log( Data, _T( "  Not enough free space to fragment\n" ), 0 );
+				Log( Data, _T( "  Not enough free space\n" ), 0 );
 				break;
 			}
-		}
-
-		// Iterate fragments
-		for (i = 0; (i < f->Fragments->ExtentCount) && (err == ERROR_SUCCESS); i++) {
-
-			MOVE_FILE_DATA mfd = {0};
-			mfd.FileHandle = f->Handle;
-			mfd.StartingVcn.QuadPart = (i == 0 ? f->Fragments->StartingVcn.QuadPart : f->Fragments->Extents[i - 1].NextVcn.QuadPart);
-			mfd.StartingLcn.QuadPart = VolumeLcn;
-			mfd.ClusterCount = (DWORD)(f->Fragments->Extents[i].NextVcn.QuadPart - mfd.StartingVcn.QuadPart);
-
-			{
-				LONG64 ExtentSize = mfd.ClusterCount * f->ClusterSize;
-				if (!Trace( Data, DEFRAG_STEP_MOVE_EXTENT, f->Path, &ExtentSize ))
-					return ERROR_REQUEST_ABORTED;
+			if (TargetExtentMaxSize < TargetExtentSize) {
+				err = ERROR_DISK_FULL;
+				Log( Data, _T( "  Not enough free space\n" ), 0 );
+				break;
 			}
+#if _DEBUG || DBG
+			Log( Data, _T( "  [d]    Largest free extent found at Lcn:0x%Ix-0x%Ix (%u clusters)\n" ), TargetExtentLcn, TargetExtentLcn + TargetExtentMaxSize, TargetExtentMaxSize );
+#endif
 
-			if (Data->Options.Flags & DEFRAG_FLAG_SIMULATE) {
-				err = ERROR_SUCCESS;	/// Don't write to disk
-			} else {
-				err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
-			}
+			/// Construct a new (destination) fragment in the center of the largest free area
+			TargetExtentLcn += ((TargetExtentMaxSize - TargetExtentSize) / 2);
+			TargetExtentMaxSize = 0;
 
-			Log( Data,
-				_T( "  #%04u: Move %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x%s\n" ),
-				i + 1,
-				mfd.ClusterCount,
-				mfd.ClusterCount * f->ClusterSize,
-				mfd.StartingVcn.QuadPart,
-				mfd.StartingVcn.QuadPart + mfd.ClusterCount,
-				mfd.StartingLcn.QuadPart,
-				mfd.StartingLcn.QuadPart + mfd.ClusterCount,
-				err,
-				Data->Options.Flags & DEFRAG_FLAG_SIMULATE ? _T( " (simulated)" ) : _T( "" )
-			);
+			for (; (TargetExtentSize > 0) && (err == ERROR_SUCCESS); ) {
 
-			if (err == ERROR_SUCCESS) {
+				MOVE_FILE_DATA mfd = {0};
 
-				/// Update volume bitmap
-				//! TODO: Make sure DefragBitmapMarkUsed works correctly
-				DefragBitmapMarkUsed( Data->Volume.Bitmap, TRUE, VolumeLcn, mfd.ClusterCount );									/// New clusters: set in-use
-				DefragBitmapMarkUsed( Data->Volume.Bitmap, FALSE, f->Fragments->Extents[i].Lcn.QuadPart, mfd.ClusterCount );	/// Old clusters: reset in-use
+				if (SourceExtentSize == 0) {
+					/// Move to the next (source) fragment
+					SourceExtentIndex++;
+					SourceExtentVcn = (SourceExtentIndex == 0 ? f->Fragments->StartingVcn.QuadPart : f->Fragments->Extents[SourceExtentIndex - 1].NextVcn.QuadPart);
+					SourceExtentLcn = f->Fragments->Extents[SourceExtentIndex].Lcn.QuadPart;
+					SourceExtentSize = f->Fragments->Extents[SourceExtentIndex].NextVcn.QuadPart - SourceExtentVcn;
+				}
 
-																																/// Advance on disk
-				VolumeLcn += mfd.ClusterCount;
+				mfd.FileHandle = f->Handle;
+				mfd.StartingVcn.QuadPart = SourceExtentVcn;
+				mfd.StartingLcn.QuadPart = TargetExtentLcn;
+				mfd.ClusterCount = (DWORD)min( TargetExtentSize, SourceExtentSize );
 
-				/// Mark the data as dirty
-				Data->Dirty = TRUE;
+				{
+					LONG64 ExtentSize = mfd.ClusterCount * f->ClusterSize;
+					if (!Trace( Data, DEFRAG_STEP_MOVE_EXTENT, f->Path, &ExtentSize ))
+						return ERROR_REQUEST_ABORTED;
+				}
 
-				/// Stats
-				Data->Move.ClusterCount += mfd.ClusterCount;
-				Data->Move.TotalSize += mfd.ClusterCount * f->ClusterSize;
-			}
-		}	/// for(extents)
+				if (Data->Options.Flags & DEFRAG_FLAG_SIMULATE) {
+					err = ERROR_SUCCESS;	/// Don't write to disk
+				} else {
+					err = DeviceIoControl( Data->Volume.Handle, FSCTL_MOVE_FILE, &mfd, sizeof( mfd ), NULL, 0, &BytesRead, NULL ) ? ERROR_SUCCESS : GetLastError();
+				}
+
+				Log( Data,
+					_T( "  #%04u: Move %u clusters (%u bytes) {Vcn:0x%04I64x-0x%04I64x -> Lcn:0x%08I64x-0x%08I64x}: 0x%x%s\n" ),
+					i + 1,
+					mfd.ClusterCount,
+					mfd.ClusterCount * f->ClusterSize,
+					mfd.StartingVcn.QuadPart,
+					mfd.StartingVcn.QuadPart + mfd.ClusterCount,
+					mfd.StartingLcn.QuadPart,
+					mfd.StartingLcn.QuadPart + mfd.ClusterCount,
+					err,
+					Data->Options.Flags & DEFRAG_FLAG_SIMULATE ? _T( " (simulated)" ) : _T( "" )
+				);
+
+				if (err == ERROR_SUCCESS) {
+
+					/// Update volume bitmap
+					//! TODO: Make sure DefragBitmapMarkUsed works correctly
+					DefragBitmapMarkUsed( Data->Volume.Bitmap, TRUE, mfd.StartingLcn.QuadPart, mfd.ClusterCount );		/// New clusters: set in-use
+					DefragBitmapMarkUsed( Data->Volume.Bitmap, FALSE, SourceExtentLcn, mfd.ClusterCount );					/// Old clusters: reset in-use
+
+					/// Mark the data as dirty
+					Data->Dirty = TRUE;
+
+					/// Advance inside the (source) fragment
+					SourceExtentVcn += mfd.ClusterCount;
+					SourceExtentLcn += mfd.ClusterCount;
+					SourceExtentSize -= mfd.ClusterCount;
+					assert( SourceExtentSize >= 0 );
+
+					/// Advance inside the (target) fragment
+					TargetExtentLcn += mfd.ClusterCount;
+
+					/// Remaining clusters
+					TargetExtentSize -= mfd.ClusterCount;
+					iFileClusters -= mfd.ClusterCount;
+
+					/// Stats
+					Data->Move.ClusterCount += mfd.ClusterCount;
+					Data->Move.TotalSize += mfd.ClusterCount * f->ClusterSize;
+				}
+
+			}	/// for(SourceFragments)
+		}	/// for(TargetFragments)
 	}	/// for(files)
 
 	return err;
@@ -694,9 +792,12 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 	if (Data->Options.Flags & DEFRAG_FLAG_COMPACT) {
 		err = DefragBitmapFindUnused( Data->Volume.Bitmap, Data->Analysis.ClusterCount, &VolumeLcn );
 		if (err != ERROR_SUCCESS) {
-			Log( Data, _T( "  Not enough free space to defragment\n" ), 0 );
+			Log( Data, _T( "  Not enough free space\n" ), 0 );
 			return err;
 		}
+#if _DEBUG || DBG
+		Log( Data, _T( "  [d]    Free extent found at Lcn:0x%Ix-0x%Ix (%u clusters)\n" ), VolumeLcn, VolumeLcn + Data->Analysis.ClusterCount, Data->Analysis.ClusterCount );
+#endif
 	}
 
 	// Iterate files
@@ -762,7 +863,7 @@ DWORD DefragDataDefragment( _In_ DEFRAG_FILES *Data )
 
 				/// Update volume bitmap
 				//! TODO: Make sure DefragBitmapMarkUsed works correctly
-				DefragBitmapMarkUsed( Data->Volume.Bitmap, TRUE, VolumeLcn, mfd.ClusterCount );									/// New clusters: set in-use
+				DefragBitmapMarkUsed( Data->Volume.Bitmap, TRUE, mfd.StartingLcn.QuadPart, mfd.ClusterCount );					/// New clusters: set in-use
 				DefragBitmapMarkUsed( Data->Volume.Bitmap, FALSE, f->Fragments->Extents[i].Lcn.QuadPart, mfd.ClusterCount );	/// Old clusters: reset in-use
 
 				/// Advance on disk
@@ -822,7 +923,7 @@ DWORD DefragDataMoveFiles( _In_ DEFRAG_FILES *Data )
 		Log( Data, _T( "\n" ), 0 );
 #if _DEBUG || DBG
 		Log( Data, _T( "[d] Compact: %s\n" ), Data->Options.Flags & DEFRAG_FLAG_COMPACT ? _T( "TRUE" ) : _T( "FALSE" ) );
-		Log( Data, _T( "[d] Fragment: %s (target fragments: %I64u)\n" ), Data->Options.Flags & DEFRAG_FLAG_FRAGMENT ? _T( "TRUE" ) : _T( "FALSE" ), Data->Options.TargetFragmentCount );
+		Log( Data, _T( "[d] Fragment: %s (target fragments: %Iu)\n" ), Data->Options.Flags & DEFRAG_FLAG_FRAGMENT ? _T( "TRUE" ) : _T( "FALSE" ), Data->Options.TargetFragmentCount );
 		Log( Data, _T( "[d] Simulate: %s\n" ), Data->Options.Flags & DEFRAG_FLAG_SIMULATE ? _T( "TRUE" ) : _T( "FALSE" ) );
 		Log( Data, _T( "\n" ), 0 );
 #endif
@@ -865,6 +966,8 @@ DWORD DefragDataMoveFiles( _In_ DEFRAG_FILES *Data )
 					Log( Data, _T( "  Files moved:    %I64u\n" ), Data->Move.FileCount );
 					Log( Data, _T( "  Clusters moved: %I64u\n" ), Data->Move.ClusterCount );
 					Log( Data, _T( "  Bytes moved:    %I64u\n" ), Data->Move.TotalSize );
+					if (Data->Options.Flags & DEFRAG_FLAG_SIMULATE)
+						Log( Data, _T( "  Simulate:       Nothing was written to disk\n" ), 0 );
 				}
 
 			} else {
