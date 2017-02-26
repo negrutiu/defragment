@@ -11,7 +11,7 @@ VOID PrintCopyright()
 {
 	_tprintf(
 		_T( "\n" )
-		_T( "File fragmentation tool\n" )
+		_T( "Fragmentation Tool\n" )
 		_T( "(c)2017, Marius Negrutiu. All rights reserved.\n" )
 		_T( "\n" )
 	);
@@ -34,22 +34,22 @@ VOID PrintSyntax()
 
 	_tprintf(
 		_T( "Syntax:\n" )
-		_T( "  %s <Command> [Options] [@]File1 [[@]File2] ... [[@]FileN]\n" )
+		_T( "  %s <Command> [Options] [@]File1 [[@]File2 ... [@]FileN]\n" )
 		_T( "\n" )
 		_T( "Commands:\n" )
-		_T( "  analyze     Analyze fragmentation\n" )
-		_T( "  defrag      Defragment files\n" )
-		_T( "  fragment    Fragment files ;)\n" )
+		_T( "  analyze     Analyze fragmentation :/\n" )
+		_T( "  defragment  Defragment files      :)\n" )
+		_T( "  fragment    Fragment files        ;)\n" )
+		_T( "  prompt      Interactive mode      :P\n" )
 		_T( "\n" )
 		_T( "Options:\n" )
 		_T( "  /compact    When defragmenting, files are moved together to a contiguous disk area\n" )
 		_T( "  /count N    When fragmenting, files are broken into this many fragments. Default is %d\n" )
 		_T( "  /simulate   Conduct a dry run. Nothing is actually written to disk\n" )
-		_T( "  /prompt     Enable interactive mode. Prompt before (de)fragmenting\n" )
 		_T( "\n" )
 		_T( "Files:\n" )
-		_T( "  Each filename can be either a file or directory. Directories are parsed recursively\n")
-		_T( "  Files prefixed by \"@\" are treated as textfile catalogs (one file per line)\n" )
+		_T( "  Filenames can be either files or directories (parsed recursively)\n")
+		_T( "  Filenames prefixed by \"@\" are treated as textfile catalogs (one file per line)\n" )
 		_T( "\n" )
 		_T( "Examples:\n" )
 		_T( "  %s analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File1\" \"@C:\\Dir with spaces\\Catalog.txt\"\n" )
@@ -110,7 +110,7 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 			///_tprintf( _T( "----- {%hs} Analyze %s\n" ), __FUNCTION__, (LPCTSTR)pParam1 );
 			break;
 		case DEFRAG_STEP_BEFORE_MOVE:
-			///_tprintf( _T( "----- {%hs} Start Defragmenting {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
+			///_tprintf( _T( "----- {%hs} Start moving {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
 			if (*pbInteractive) {
 
 				TCHAR szInput[256];
@@ -120,9 +120,10 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 				_tprintf(
 					_T( "\n" )
 					_T( "Actions:\n" )
-					_T( "  c         Toggle file compacting ON or OFF (defragmenting only)\n" )
-					_T( "  fc <N>    Set target fragment count (fragmenting only)\n" )
 					_T( "  s         Toggle simulation ON or OFF\n" )
+					_T( "  c         Toggle compacting ON or OFF (\"defragment\" only)\n" )
+					_T( "  fc <N>    Set target fragment count (\"fragment\" only)\n" )
+					_T( "\n" )
 					_T( "  d         Start defragmenting files\n" )
 					_T( "  f         Start fragmenting files\n" )
 					_T( "  q         Quit\n" )
@@ -131,14 +132,14 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 
 				while( TRUE ) {
 					
-					_tprintf( _T( "Action (Compact:%s, TargetFragments:%I64u, Simulate:%s) : " ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ), pOptions->TargetFragmentCount, pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ) );
+					_tprintf( _T( "Action (Simulate:%s, Compact:%s, TargetFragments:%u) : " ), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ), pOptions->TargetFragmentCount );
 					
 					_tscanf( _T( "%255s" ), szInput );
 					if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "c" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "fc" ), -1 ) == CSTR_EQUAL) {
 						_tscanf( _T( "%255s" ), szInput );
-						pOptions->TargetFragmentCount = _tstoi64( szInput );
+						pOptions->TargetFragmentCount = (ULONG)_tstol( szInput );
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "s" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "d" ), -1 ) == CSTR_EQUAL) {
@@ -217,6 +218,13 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 				DefragOpt.Flags |= DEFRAG_FLAG_FRAGMENT;
 				DefragOpt.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
 
+			} else if (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "prompt" ), -1 ) == CSTR_EQUAL) {
+
+				bInteractive = TRUE;
+				iCommand = COMMAND_DEFRAG;
+				DefragOpt.Flags &= ~DEFRAG_FLAG_FRAGMENT;
+				DefragOpt.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
+
 			} else {
 				_tprintf( _T( "Warning: Unknown command \"%s\"\n" ), argv[i] );
 			}
@@ -226,17 +234,13 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 			// Options
 			if (argv[i][0] == _T( '-' ) || argv[i][0] == _T( '/' )) {
 
-				if ((iCommand == COMMAND_DEFRAG) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "prompt" ), -1 ) == CSTR_EQUAL)) {
-
-					bInteractive = TRUE;
-
-				} else if ((iCommand == COMMAND_DEFRAG) && !(DefragOpt.Flags & DEFRAG_FLAG_FRAGMENT) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "compact" ), -1 ) == CSTR_EQUAL)) {
+				if ((iCommand == COMMAND_DEFRAG) && !(DefragOpt.Flags & DEFRAG_FLAG_FRAGMENT) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "compact" ), -1 ) == CSTR_EQUAL)) {
 
 					DefragOpt.Flags |= DEFRAG_FLAG_COMPACT;
 
-				} else if ((iCommand == COMMAND_DEFRAG) && (DefragOpt.Flags & DEFRAG_FLAG_FRAGMENT) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "count" ), -1 ) == CSTR_EQUAL) && (i + 1 < argc)) {
+				} else if ((iCommand == COMMAND_DEFRAG) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "count" ), -1 ) == CSTR_EQUAL) && (i + 1 < argc)) {
 
-					DefragOpt.TargetFragmentCount = _tstoi64( argv[i + 1] );
+					DefragOpt.TargetFragmentCount = (ULONG)_tstol( argv[i + 1] );
 					i++;
 
 				} else if ((iCommand == COMMAND_DEFRAG) && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i] + 1, -1, _T( "simulate" ), -1 ) == CSTR_EQUAL)) {
