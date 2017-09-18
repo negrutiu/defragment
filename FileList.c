@@ -69,8 +69,8 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 					size_t len;
 
 					StringCchCopyEx( szPath, ARRAYSIZE( szPath ), pszFile, &psz, &len, 0 );
-					for (; (psz > szPath) && (*(psz - 1) == _T( '\\' ) || *(psz - 1) == _T( '/' )); *(--psz) = _T( '\0' ), len++);
-					StringCchCopyEx( psz, len, _T( "\\*.*" ), &psz, &len, 0 );		/// Convert to Dir\*.*
+					for (; (psz > szPath) && (*(psz - 1) == _T( '\\' ) || *(psz - 1) == _T( '/' )); *(--psz) = _T( '\0' ), len++);		/// Remove trailing backslashes
+					StringCchCopyEx( psz, len, _T( "\\*.*" ), &psz, &len, 0 );		/// Add *.*
 					len = ARRAYSIZE( szPath ) - len;
 
 					return FileListAddPattern( pList, szPath, ARRAYSIZE( szPath ), len );
