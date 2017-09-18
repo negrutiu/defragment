@@ -6,32 +6,44 @@
 #include "FileList.h"
 
 
-//++ FileListAddDirectory
-BOOL FileListAddDirectory( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszDir, _In_ size_t iDirMaxLen, _In_ size_t iDirLen )
+//++ FileListPathHasWildcards
+BOOL FileListPathHasWildcards( _In_ LPCTSTR pszPath )
 {
-	if (pList && pszDir && *pszDir) {
+	if (pszPath) {
+		for (; *pszPath; pszPath++)
+			if (*pszPath == _T( '*' ) || *pszPath == _T( '?' ))
+				return TRUE;
+	}
+	return FALSE;
+}
 
-		LPTSTR psz = pszDir + iDirLen;
+
+//++ FileListAddPattern
+BOOL FileListAddPattern( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszPath, _In_ size_t iDirMaxLen, _In_ size_t iDirLen )
+{
+	if (pList && pszPath && *pszPath) {
+
+		LPTSTR psz = pszPath + iDirLen;
 		size_t len = iDirMaxLen - iDirLen;
 		WIN32_FIND_DATA fd = {0};
 		HANDLE h;
 
 #if _DEBUG || DBG
-		_tprintf( _T( "[d] %hs( %s )\n" ), __FUNCTION__, pszDir );
+		_tprintf( _T( "[d] %hs( %s )\n" ), __FUNCTION__, pszPath );
 #endif
 
-		StringCchCopy( psz, len, _T( "\\*.*" ) );
-		h = FindFirstFile( pszDir, &fd );
+		for (; (psz > pszPath) && (*psz != _T( '\\' )); psz--, len--);		/// Point to the last backslash
+
+		h = FindFirstFile( pszPath, &fd );
 		if (h != INVALID_HANDLE_VALUE) {
 			do {
 				if (CompareString( CP_ACP, NORM_IGNORECASE, fd.cFileName, -1, _T( "." ), -1 ) != CSTR_EQUAL &&
 					CompareString( CP_ACP, NORM_IGNORECASE, fd.cFileName, -1, _T( ".." ), -1 ) != CSTR_EQUAL)
 				{
 					StringCchPrintf( psz, len, _T( "\\%s" ), fd.cFileName );
-					FileListAddFile( pList, pszDir );
+					FileListAddFile( pList, pszPath );
 				}
-			}
-			while (FindNextFile( h, &fd ));
+			} while (FindNextFile( h, &fd ));
 
 			return TRUE;
 		}
@@ -52,16 +64,16 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 				if (Attr & FILE_ATTRIBUTE_DIRECTORY) {
 
 					// Directory
-					TCHAR szDir[1024];
+					TCHAR szPath[1024];
 					LPTSTR psz;
 					size_t len;
 
-					StringCchCopyEx( szDir, ARRAYSIZE( szDir ), pszFile, &psz, &len, 0 );
-					len = ARRAYSIZE( szDir ) - len;
-					for (; len > 0 && (szDir[len - 1] == _T( '\\' ) || (szDir[len - 1] == _T( '/' ))); len--)
-						szDir[len - 1] = _T( '\0' );	/// Remove trailing backslash
+					StringCchCopyEx( szPath, ARRAYSIZE( szPath ), pszFile, &psz, &len, 0 );
+					for (; (psz > szPath) && (*(psz - 1) == _T( '\\' ) || *(psz - 1) == _T( '/' )); *(--psz) = _T( '\0' ), len++);
+					StringCchCopyEx( psz, len, _T( "\\*.*" ), &psz, &len, 0 );		/// Convert to Dir\*.*
+					len = ARRAYSIZE( szPath ) - len;
 
-					return FileListAddDirectory( pList, szDir, ARRAYSIZE(szDir), len );
+					return FileListAddPattern( pList, szPath, ARRAYSIZE( szPath ), len );
 				
 				} else {
 
@@ -78,10 +90,27 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 				return TRUE;
 
 			} else {
+
 				DWORD err = GetLastError();
+
+				// Path with wildcards
+				if (FileListPathHasWildcards( pszFile )) {
+
+					// Directory
+					TCHAR szPath[1024];
+					LPTSTR psz;
+					size_t len;
+
+					StringCchCopyEx( szPath, ARRAYSIZE( szPath ), pszFile, &psz, &len, 0 );
+					len = ARRAYSIZE( szPath ) - len;
+
+					return FileListAddPattern( pList, szPath, ARRAYSIZE( szPath ), len );
+
+				} else {
 #if _DEBUG || DBG
-				_tprintf( _T( "[d] GetFileAttributes( %s ) == 0x%x\n" ), pszFile, err );
+					_tprintf( _T( "[d] GetFileAttributes( %s ) == 0x%x\n" ), pszFile, err );
 #endif
+				}
 			}
 		}
 	}
