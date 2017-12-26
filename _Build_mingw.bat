@@ -1,4 +1,7 @@
+REM :: Marius Negrutiu (marius.negrutiu@protonmail.com)
+
 @echo off
+echo.
 
 set MINGW=%SYSTEMDRIVE%\TDM-GCC-64
 if not exist "%MINGW%\mingwvars.bat" echo ERROR: "%MINGW%\mingwvars.bat" not found && pause && goto :EOF
@@ -22,4 +25,4 @@ mingw32-make.exe ARCH=X64 CHAR=Unicode OUTDIR=Release-mingw-x64 -fMakefile.mingw
 if %ERRORLEVEL% neq 0 echo ERRORLEVEL == %ERRORLEVEL% && pause && goto :EOF
 
 echo.
-REM pause
+::pause

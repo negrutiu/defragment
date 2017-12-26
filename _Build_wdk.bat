@@ -1,4 +1,7 @@
+REM :: Marius Negrutiu (marius.negrutiu@protonmail.com)
+
 @echo off
+echo.
 
 :CHDIR
 cd /d "%~dp0"

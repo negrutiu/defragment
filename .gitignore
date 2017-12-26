@@ -1,12 +1,13 @@
-Debug-*
-Release-*
+Defragment-*
 
-objchk_*
-objfre_*
+Debug-*/
+Release-*/
+.vs/
+ipch/
 
-ipch
+objchk_*/
+objfre_*/
 
-*.lnk
 *.sdf
 *.opensdf
 *.suo

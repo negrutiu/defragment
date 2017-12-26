@@ -1,4 +1,7 @@
+REM :: Marius Negrutiu (marius.negrutiu@protonmail.com)
+
 @echo off
+echo.
 
 cd /d "%~dp0"
 
