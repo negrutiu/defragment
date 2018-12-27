@@ -16,6 +16,7 @@
 PROJECT  = Defrag
 BIN      = $(PROJECT).exe
 OBJ      = StdAfx.o Main.o Defragment.o FileList.o ResourceEx.res
+LIB      = -lkernel32
 SAL      = -D__in= -D__out= -D__inout= -D__in_opt= -D__out_opt= \
            -D_In_= -D_Out_= -D_Inout_= -D_In_opt_= -D_Out_opt_=
 
@@ -30,12 +31,12 @@ _BIN = $(patsubst %,$(OUTDIR)/%,$(BIN))
 
 # ARCH
 ifeq ($(ARCH), X64)
-	CFLAGS  += -m64 -mmmx -msse -msse2 -DNDEBUG -O3
-	LDFLAGS += -m64
+	CFLAGS  += -DNDEBUG -O3
+	LDFLAGS += -Wl,--high-entropy-va
 	RCFLAGS += -F pe-x86-64
 else
-	CFLAGS  += -m32 -march=pentium2 -DNDEBUG -O3
-	LDFLAGS += -m32
+	CFLAGS  += -march=pentium2 -DNDEBUG -O3
+	LDFLAGS +=
 	RCFLAGS += -F pe-i386
 endif
 
@@ -45,24 +46,27 @@ ifeq ($(CHAR), ANSI)
 	LDFLAGS +=
 else
 	CFLAGS  += -municode -DUNICODE -D_UNICODE
-	LDFLAGS += -municode
+	LDFLAGS +=
 endif
 
 
-CFLAGS  += \
+CFLAGS += \
 	-mconsole \
+	-s \
+	-Os \
+	-fPIE \
+	-static-libgcc \
 	$(SAL) \
 	$(CUSTOM_CFLAGS)
 
 LDFLAGS += \
-	-s \
-	-mconsole \
-	-static-libgcc \
-	-Wl,--no-seh \
+	$(CFLAGS) \
+	-Wl,--gc-sections \
 	-Wl,--nxcompat \
 	-Wl,--dynamicbase \
 	-Wl,--enable-auto-image-base \
 	-Wl,--enable-stdcall-fixup \
+	$(LIB) \
 	$(CUSTOM_LDFLAGS)
 
 RCFLAGS += \
@@ -88,6 +92,10 @@ $(_BIN): $(_OBJ)
 # Compile .c
 $(OUTDIR)/%.o: %.c
 	gcc $(CFLAGS) -o $@ -c $<
+
+# Compile .cpp
+$(OUTDIR)/%.o: %.cpp
+	g++ $(CFLAGS) -o $@ -c $<
 
 # Compile .rc
 $(OUTDIR)/%.res: %.rc
