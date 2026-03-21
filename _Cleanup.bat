@@ -5,18 +5,18 @@ echo.
 
 cd /d "%~dp0"
 
-call :CLEANUP
-call :CLEANUP
-call :CLEANUP
-goto :EOF
+call :cleanup
+call :cleanup
+call :cleanup
+exit /b 0
 
 
-:CLEANUP
-rd /S /Q .vs
-rd /S /Q ipch
+:cleanup
+rd /s /q .vs
+rd /s /q ipch
 
-for /D %%a in (Debug-*)   do rd /S /Q "%%a"
-for /D %%a in (Release-*) do rd /S /Q "%%a"
+for /d %%a in (Debug-*)   do rd /s /q "%%a"
+for /d %%a in (Release-*) do rd /s /q "%%a"
 
 del *.aps
 del *.bak
@@ -26,9 +26,9 @@ del /AH *.suo
 del *.sdf
 del *.VC.db
 
-:CLEANUP_WDK
-for /D %%a in (objchk*) do rd /S /Q "%%a"
-for /D %%a in (objfre*) do rd /S /Q "%%a"
+:cleanup_wdk
+for /d %%a in (objchk*) do rd /s /q "%%a"
+for /d %%a in (objfre*) do rd /s /q "%%a"
 
 del *.err
 del *.wrn

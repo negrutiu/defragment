@@ -1,0 +1,1 @@
+@call "%~dp0_Build_mingw.bat" Debug pdb

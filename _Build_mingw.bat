@@ -1,36 +1,41 @@
-REM :: Marius Negrutiu (marius.negrutiu@protonmail.com)
+rem :: Marius Negrutiu (marius.negrutiu@protonmail.com)
 
 @echo off
+echo.
+setlocal EnableDelayedExpansion
 
-if not exist "%MSYS2%" set MSYS2=C:\msys2
-if not exist "%MSYS2%" set MSYS2=C:\msys64
-set MINGW32=%MSYS2%\mingw32
-set MINGW64=%MSYS2%\mingw64
+if "%config%" equ "" set config=%~1
+if "%config%" equ "" set config=Release
+set makemore=%~2
+
+for %%d in (%SYSTEMDRIVE%\mingw32 %SYSTEMDRIVE%\msys64\mingw32 "") do (
+  if not exist "!MINGW32!\bin\gcc.exe" set MINGW32=%%~d
+)
+for %%d in (%SYSTEMDRIVE%\mingw64 %SYSTEMDRIVE%\msys64\mingw64 "") do (
+  if not exist "!MINGW64!\bin\gcc.exe" set MINGW64=%%~d
+)
+for %%d in (%SYSTEMDRIVE%\msys64\usr\bin %SYSTEMDRIVE%\cygwin64\bin "%PROGRAMFILES%\Git\usr\bin" "") do (
+  if not exist "!posix_shell!\grep.exe" set posix_shell=%%~d
+)
+
 set ORIGINAL_PATH=%PATH%
 
 cd /d "%~dp0"
 
 :x86
-if not exist "%MINGW32%" echo ERROR: Missing "%MINGW32%" && pause && exit /B 2
-set PATH=%MINGW32%\bin;%ORIGINAL_PATH%
+set PATH=%MINGW32%\bin;%posix_shell%;%ORIGINAL_PATH%
 
-echo.
 echo -------------------------------------------------------------------
-echo Release (x86)
+echo %config% (x86)
 echo -------------------------------------------------------------------
-mingw32-make.exe ARCH=X86 CHAR=Unicode OUTDIR=Release-mingw-Win32 -fMakefile.mingw all
-if %ERRORLEVEL% neq 0 pause && exit /B %ERRORLEVEL%
+mingw32-make.exe CONFIG=%config% OUTDIR=%config%-mingw-Win32 -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
 
 :amd64
-if not exist "%MINGW64%" echo ERROR: Missing "%MINGW64%" && pause && exit /B 2
-set PATH=%MINGW64%\bin;%ORIGINAL_PATH%
+set PATH=%MINGW64%\bin;%posix_shell%;%ORIGINAL_PATH%
 
-echo.
 echo -------------------------------------------------------------------
-echo Release (x64)
+echo %config% (x64)
 echo -------------------------------------------------------------------
-mingw32-make.exe ARCH=X64 CHAR=Unicode OUTDIR=Release-mingw-x64 -fMakefile.mingw all
-if %ERRORLEVEL% neq 0 pause && exit /B %ERRORLEVEL%
+mingw32-make.exe CONFIG=%config% OUTDIR=%config%-mingw-x64 -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
 
-echo.
-::pause
+rem pause
