@@ -4,7 +4,7 @@
 
 #include "StdAfx.h"
 #include "Defragment.h"
-#include <Winioctl.h>
+#include <winioctl.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -7,7 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include <Windows.h>
+#include <windows.h>
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -32,7 +32,7 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include <Windows.h>\r\n"
+    "#include <windows.h>\r\n"
     "\0"
 END
 
@@ -90,7 +90,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_MAIN                ICON                    "res\\Rubik.ico"
+IDI_MAIN                ICON                    "res/Rubik.ico"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

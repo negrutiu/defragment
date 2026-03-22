@@ -17,11 +17,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # we'll build on windows, linux and macos just for cross-checking, but only windows artifacts will get published
           - os: windows-latest
             python: python
             make-x86: 'set PATH=C:\mingw32\bin;C:\msys64\usr\bin;%PATH% && mingw32-make.exe'
             make-amd64: 'set PATH=C:\mingw64\bin;C:\msys64\usr\bin;%PATH% && mingw32-make.exe'
             publish: true
+
+          - os: ubuntu-latest
+            python: python3
+            make-x86: 'make PREFIX=i686-w64-mingw32-'
+            make-amd64: 'make PREFIX=x86_64-w64-mingw32-'
+
+          - os: macos-latest
+            python: python3
+            make-x86: 'make PREFIX=i686-w64-mingw32-'
+            make-amd64: 'make PREFIX=x86_64-w64-mingw32-'
 
     defaults:
       run:
@@ -37,6 +48,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install mingw-w64 (linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64
+
+      - name: Install mingw-w64 (macos)
+        if: startsWith(matrix.os, 'macos')
+        run: brew install mingw-w64
 
       - name: Query mingw-w64 version
         id: version_gcc
@@ -87,10 +106,10 @@ jobs:
       # --------------------------------------------------------------------------------
 
       - name: Build amd64
-        run: ${{matrix.make-amd64}} CONFIG=Release "OUTDIR=${{github.workspace}}/bin/Release-mingw-amd64" -fMakefile.mingw clean all
+        run: ${{matrix.make-amd64}} -fMakefile.mingw CONFIG=Release OUTDIR=../bin/Release-mingw-amd64 all
 
       - name: Build x86
-        run: ${{matrix.make-x86}} CONFIG=Release "OUTDIR=${{github.workspace}}/bin/Release-mingw-x86" -fMakefile.mingw clean all
+        run: ${{matrix.make-x86}} -fMakefile.mingw CONFIG=Release OUTDIR=../bin/Release-mingw-x86 all
 
       - name: Build arm64
         if: startsWith(matrix.os, 'windows')

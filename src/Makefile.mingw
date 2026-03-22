@@ -133,6 +133,6 @@ $(OUTDIR)/%.res: %.rc
 	@echo
 	$(PREFIX)windres -o $@ -i $< -O coff --input-format=rc $(RCFLAGS)
 
-$(OUTDIR)/%.res: $(OUTDIR)/%.rc
+$(OUTDIR)/manifest.res: $(OUTDIR)/manifest.rc
 	@echo
 	$(PREFIX)windres -o $@ -i $< -O coff --input-format=rc $(RCFLAGS)
