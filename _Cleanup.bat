@@ -15,8 +15,7 @@ exit /b 0
 rd /s /q .vs
 rd /s /q ipch
 
-for /d %%a in (Debug-*)   do rd /s /q "%%a"
-for /d %%a in (Release-*) do rd /s /q "%%a"
+rd /s /q bin
 
 del *.aps
 del *.bak
@@ -27,8 +26,8 @@ del *.sdf
 del *.VC.db
 
 :cleanup_wdk
-for /d %%a in (objchk*) do rd /s /q "%%a"
-for /d %%a in (objfre*) do rd /s /q "%%a"
+for /d %%a in (src\objchk*) do rd /s /q "%%a"
+for /d %%a in (src\objfre*) do rd /s /q "%%a"
 
 del *.err
 del *.wrn

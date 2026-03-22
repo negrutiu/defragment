@@ -28,7 +28,7 @@ set PATH=%MINGW32%\bin;%posix_shell%;%ORIGINAL_PATH%
 echo -------------------------------------------------------------------
 echo %config% (x86)
 echo -------------------------------------------------------------------
-mingw32-make.exe CONFIG=%config% OUTDIR=%config%-mingw-Win32 -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
+mingw32-make.exe CONFIG=%config% "OUTDIR=%~dp0bin/%config%-mingw-Win32" -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
 
 :amd64
 set PATH=%MINGW64%\bin;%posix_shell%;%ORIGINAL_PATH%
@@ -36,6 +36,6 @@ set PATH=%MINGW64%\bin;%posix_shell%;%ORIGINAL_PATH%
 echo -------------------------------------------------------------------
 echo %config% (x64)
 echo -------------------------------------------------------------------
-mingw32-make.exe CONFIG=%config% OUTDIR=%config%-mingw-x64 -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
+mingw32-make.exe CONFIG=%config% "OUTDIR=%~dp0bin/%config%-mingw-x64" -fMakefile.mingw all %makemore% || pause && exit /b !errorlevel!
 
 rem pause

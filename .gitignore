@@ -1,12 +1,9 @@
-Defragment-*
-
-Debug-*/
-Release-*/
-.vs/
-ipch/
-
+bin/
 objchk_*/
 objfre_*/
+
+.vs/
+ipch/
 
 *.sdf
 *.opensdf
