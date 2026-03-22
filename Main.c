@@ -280,6 +280,20 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 	int i, i0;
 	PFILE_LIST filelist = NULL;
 
+#ifdef _M_IX86
+	typedef BOOL(WINAPI * TypeWow64DisableWow64FsRedirection)(PVOID * ppOldValue);
+    typedef BOOL(WINAPI * TypeWow64RevertWow64FsRedirection)(PVOID pOlValue);
+    TypeWow64DisableWow64FsRedirection fnDisableRedirection =
+        (TypeWow64DisableWow64FsRedirection)GetProcAddress(GetModuleHandle(_T("kernel32")), "Wow64DisableWow64FsRedirection");
+	TypeWow64RevertWow64FsRedirection fnRevertRedirection =
+        (TypeWow64RevertWow64FsRedirection)GetProcAddress(GetModuleHandle(_T("kernel32")), "Wow64RevertWow64FsRedirection");
+
+    PVOID pRedirectionState = NULL;
+	if (fnDisableRedirection) {
+        fnDisableRedirection(&pRedirectionState);
+    }
+#endif
+
 	PrintHeader();
 
 	/// Allocate data
@@ -424,6 +438,12 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 		_gettch();
 		_tprintf( _T( "\n" ) );
 	}
+
+#ifdef _M_IX86
+    if (fnRevertRedirection) {
+        fnRevertRedirection(pRedirectionState);
+    }
+#endif
 
 	return (int)err;
 }
