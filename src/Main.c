@@ -66,8 +66,7 @@ void PrintHeader()
 }
 
 
-//++ PrintSyntax
-void PrintSyntax()
+void PrintUsage()
 {
     TCHAR path[MAX_PATH], *filename;
 
@@ -81,7 +80,7 @@ void PrintSyntax()
     }
 
     _tprintf(
-        _T("Syntax:\n")
+        _T("Usage:\n")
         _T("  %s analyze <files>\n")
         _T("  %s defragment [--compact] [--simulate] <files>\n")
 #ifdef ENABLE_FRAGMENTATION
@@ -96,7 +95,7 @@ void PrintSyntax()
 #endif
         _T("\n")
         _T("Commands:\n")
-        _T("  analyze     Analyze fragmentation\n")
+        _T("  analyze     Analyze file fragments\n")
         _T("  defragment  Defragment files\n")
 #ifdef ENABLE_FRAGMENTATION
         _T("  fragment    Fragment files\n")
@@ -425,7 +424,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 		default:
 			err = ERROR_INVALID_PARAMETER;
-			PrintSyntax();
+			PrintUsage();
 			_tprintf( _T( "ERROR: Invalid command\n" ) );
 	}
 
