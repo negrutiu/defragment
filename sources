@@ -26,7 +26,7 @@ TARGETLIBS= \
 #            $(SDK_LIB_PATH)\gdi32.lib \
 #            $(SDK_LIB_PATH)\uuid.lib \
 #            $(SDK_LIB_PATH)\ntdll.lib \
-#            $(SDK_LIB_PATH)\version.lib
+            $(SDK_LIB_PATH)\version.lib
 
 #INCLUDES=$(DDK_INC_PATH);$(ATL_INC_PATH)\mfc42
 

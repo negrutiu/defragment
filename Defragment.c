@@ -745,7 +745,7 @@ DWORD DefragDataFragment( _In_ DEFRAG_FILES *Data )
 					/// Update volume bitmap
 					//! TODO: Make sure DefragBitmapMarkUsed works correctly
 					DefragBitmapMarkUsed( Data->Volume.Bitmap, TRUE, mfd.StartingLcn.QuadPart, mfd.ClusterCount );		/// New clusters: set in-use
-					DefragBitmapMarkUsed( Data->Volume.Bitmap, FALSE, SourceExtentLcn, mfd.ClusterCount );					/// Old clusters: reset in-use
+					DefragBitmapMarkUsed( Data->Volume.Bitmap, FALSE, SourceExtentLcn, mfd.ClusterCount );				/// Old clusters: reset in-use
 
 					/// Mark the data as dirty
 					Data->Dirty = TRUE;
@@ -949,7 +949,7 @@ DWORD DefragDataMoveFiles( _In_ DEFRAG_FILES *Data )
 			err = DefragGetVolumeBitmap( Data->Volume.Handle, &Data->Volume.Bitmap, &Data->Volume.BitmapSize );
 			if (err == ERROR_SUCCESS) {
 
-				ULONG ClusterSize;
+				ULONG ClusterSize = 0;
 				DefragGetFileClusterSize( Data->Volume.Handle, &ClusterSize );
 				Log( Data, _T( "  Bitmap: %I64u clusters (%I64u bytes)\n" ), Data->Volume.Bitmap->BitmapSize.QuadPart, Data->Volume.Bitmap->BitmapSize.QuadPart * ClusterSize );
 

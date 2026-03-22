@@ -140,6 +140,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
@@ -155,6 +156,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
@@ -170,6 +172,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
@@ -191,6 +194,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
@@ -211,6 +215,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
@@ -231,6 +236,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>version.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>.\Res\Compatibility.xml</AdditionalManifestFiles>
