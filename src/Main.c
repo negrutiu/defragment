@@ -316,7 +316,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 			command = COMMAND_ANALYZE;
 
-		} else if (command == COMMAND_NONE && CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defrag" ), -1 ) == CSTR_EQUAL || CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defragment" ), -1 ) == CSTR_EQUAL) {
+		} else if (command == COMMAND_NONE && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defrag" ), -1 ) == CSTR_EQUAL || CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defragment" ), -1 ) == CSTR_EQUAL)) {
 
 			command = COMMAND_DEFRAG;
 			options.Flags &= ~DEFRAG_FLAG_FRAGMENT;
