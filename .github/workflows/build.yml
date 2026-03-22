@@ -127,15 +127,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # we're using dawidd6/action-download-artifact@v5 because of `skip_unpack`
       - name: Download artifacts
-        uses: dawidd6/action-download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
-          path: build/artifacts
-          name: ^defragment$
-          name_is_regexp: true
-          run_id: ${{github.run_id}}
-          skip_unpack: true
+          name: defragment
+          path: bin/artifacts
 
       - name: Redact release notes
         shell: python
@@ -156,7 +152,7 @@ jobs:
           # note: `tag` is the release key
           tag: release-candidate
           name: ${{needs.build.outputs.version}}
-          artifacts: build/artifacts/*
+          artifacts: bin/artifacts/*
           bodyFile: .github/workflows/release-body.md
           draft: true
           makeLatest: true
