@@ -3,15 +3,15 @@
 <assemblyIdentity
     version="1.0.0.0"
     processorArchitecture="*"
-    name="Microsoft.Windows.Defrag"
+    name="Microsoft.Windows.Defragment"
     type="win32"
 />
-<description>Defrag</description>
+<description>Defragment</description>
 
 <ms_asmv2:trustInfo xmlns:ms_asmv2="urn:schemas-microsoft-com:asm.v2">
     <ms_asmv2:security>
         <ms_asmv2:requestedPrivileges>
-            <ms_asmv2:requestedExecutionLevel level="asInvoker" />
+            <ms_asmv2:requestedExecutionLevel level="requireAdministrator" />
         </ms_asmv2:requestedPrivileges>
     </ms_asmv2:security>
 </ms_asmv2:trustInfo>
