@@ -99,10 +99,17 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{matrix.publish && 'defragment' || format('defragment-{0}', matrix.os)}}
+          name: ${{matrix.publish && 'binaries' || format('binaries-{0}', matrix.os)}}
           path: |
             bin/**/*.exe
             bin/**/*.pdb
+
+      - name: Upload main binary (x86)
+        if: matrix.publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: defragment.exe
+          path: bin/Release-mingw-x86/defragment.exe
 
   # --------------------------------------------------------------------------------
   # GitHub release (draft)
