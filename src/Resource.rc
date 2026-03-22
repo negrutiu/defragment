@@ -70,7 +70,7 @@ BEGIN
             VALUE "CompanyName", "https://github.com/negrutiu/defragment"
             VALUE "FileDescription", "De/Fragmentation Tool"
             VALUE "FileVersion", "1.5.0.0"
-            VALUE "LegalCopyright", "(C)2017, Marius Negrutiu. All rights reserved."
+            VALUE "LegalCopyright", "(C)2017-2026, Marius Negrutiu. All rights reserved."
             VALUE "OriginalFilename", "defragment.exe"
             VALUE "ProductName", "Defragment"
             VALUE "ProductVersion", "1.5.0.0"
