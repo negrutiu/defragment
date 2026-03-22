@@ -1,0 +1,155 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'github/**'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python: python
+            make-x86: 'set PATH=C:\mingw32\bin;C:\msys64\usr\bin;%PATH% && mingw32-make.exe'
+            make-amd64: 'set PATH=C:\mingw64\bin;C:\msys64\usr\bin;%PATH% && mingw32-make.exe'
+            publish: true
+
+    defaults:
+      run:
+        shell: ${{startsWith(matrix.os, 'windows') && 'cmd' || 'bash'}}
+
+    runs-on: ${{matrix.os}}
+
+    outputs:
+      # accessible from other jobs as ${{needs.build.outputs.version}}
+      version: ${{steps.version.outputs.version}}
+      version_gcc: ${{steps.version_gcc.outputs.version_gcc}}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Query mingw-w64 version
+        id: version_gcc
+        shell: python
+        run: |
+          import os, sys
+          sys.path.insert(0, r'${{github.workspace}}')
+          from _versions import *   # _versions.py
+
+          if os.name == 'nt':
+            version_gcc = get_gcc_version(r"C:\mingw32\bin\gcc.exe")
+            os.environ['PATH'] = fr"C:\mingw32\bin;C:\msys64\usr\bin;{os.environ['PATH']}"
+            os.system('gcc --version')
+            os.environ['PATH'] = fr"C:\mingw64\bin;C:\msys64\usr\bin;{os.environ['PATH']}"
+            os.system('gcc --version')
+          else:
+            version_gcc = get_gcc_version('i686-w64-mingw32-gcc')
+            os.system('i686-w64-mingw32-gcc --version')
+            os.system('x86_64-w64-mingw32-gcc --version')
+
+          print(f'version_gcc={version_gcc}', flush=True)
+          assert version_gcc, "empty gcc version"
+
+          if r'${{matrix.publish}}'.lower() == 'true':
+            with open(os.getenv('GITHUB_OUTPUT'), "a") as fout:
+              fout.write(f"version_gcc={version_gcc}\n")
+
+      # --------------------------------------------------------------------------------
+      # Versioning
+      # --------------------------------------------------------------------------------
+        
+      - name: Version
+        id: version
+        shell: python
+        run: |
+          import os
+          from datetime import datetime, timezone
+          date = datetime.now(tz=timezone.utc)
+          with open(os.getenv('GITHUB_OUTPUT'), "a") as fout:
+            print(     f"version={date.year%100}.{date.month}.{date.day}.${{github.run_number}}")
+            fout.write(f"version={date.year%100}.{date.month}.{date.day}.${{github.run_number}}\n")
+
+      - name: Replace version in resource file
+        run: ${{matrix.python}} _versions.py replace-rc --file=src/Resource.rc --version=${{steps.version.outputs.version}}
+
+      # --------------------------------------------------------------------------------
+      # Build
+      # --------------------------------------------------------------------------------
+
+      - name: Build amd64
+        run: ${{matrix.make-amd64}} CONFIG=Release "OUTDIR=${{github.workspace}}/bin/Release-mingw-amd64" -fMakefile.mingw clean all
+
+      - name: Build x86
+        run: ${{matrix.make-x86}} CONFIG=Release "OUTDIR=${{github.workspace}}/bin/Release-mingw-x86" -fMakefile.mingw clean all
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.publish && 'defragment' || format('defragment-{0}', matrix.os)}}
+          path: |
+            bin/**/*.exe
+            bin/**/*.pdb
+
+  # --------------------------------------------------------------------------------
+  # GitHub release (draft)
+  # --------------------------------------------------------------------------------
+
+  release:
+    name: Release Draft (master branch)
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/github/')
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # we're using dawidd6/action-download-artifact@v5 because of `skip_unpack`
+      - name: Download artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          path: build/artifacts
+          name: ^defragment$
+          name_is_regexp: true
+          run_id: ${{github.run_id}}
+          skip_unpack: true
+
+      - name: Redact release notes
+        shell: python
+        run: |
+          lines = []
+          with open(".github/workflows/release-body.md") as fin:
+            line = fin.read()
+            line = line.replace('{url-workflow}', 'https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}')
+            line = line.replace('{version-gcc}', '${{needs.build.outputs.version_gcc}}')
+            lines.append(line)
+          with open(".github/workflows/release-body.md", "w") as fout:
+            for line in lines:
+              fout.write(line)
+  
+      - name: GitHub release draft
+        uses: ncipollo/release-action@v1
+        with:
+          # note: `tag` is the release key
+          tag: release-candidate
+          name: ${{needs.build.outputs.version}}
+          artifacts: build/artifacts/*
+          bodyFile: .github/workflows/release-body.md
+          draft: true
+          makeLatest: true
+          allowUpdates: true
+          updateOnlyUnreleased: true
+          artifactErrorsFailBuild: true
+          removeArtifacts: true
