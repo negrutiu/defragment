@@ -1,0 +1,15 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+BreakBeforeBraces: Linux                    # Like "Attach", but break before braces on function, namespace and class definitions
+# SpaceBeforeParens: ControlStatements
+# AllowShortIfStatementsOnASingleLine: true
+# AllowShortLoopsOnASingleLine: true
+# AllowShortFunctionsOnASingleLine: All
+BinPackParameters: true
+BinPackArguments: true
+CompactNamespaces: true
+ColumnLimit: 140
+MaxEmptyLinesToKeep: 2
+SortIncludes: false
