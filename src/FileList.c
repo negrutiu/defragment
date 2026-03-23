@@ -6,7 +6,6 @@
 #include "FileList.h"
 
 
-//++ FileListPathHasWildcards
 BOOL FileListPathHasWildcards( _In_ LPCTSTR pszPath )
 {
 	if (pszPath) {
@@ -18,7 +17,6 @@ BOOL FileListPathHasWildcards( _In_ LPCTSTR pszPath )
 }
 
 
-//++ FileListAddPattern
 BOOL FileListAddPattern( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszPath, _In_ size_t iDirMaxLen, _In_ size_t iDirLen )
 {
 	if (pList && pszPath && *pszPath) {
@@ -32,7 +30,7 @@ BOOL FileListAddPattern( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszPath, _In_ siz
 		_tprintf( _T( "[d] %hs( %s )\n" ), __FUNCTION__, pszPath );
 #endif
 
-		for (; (psz > pszPath) && (*psz != _T( '\\' )); psz--, len--);		/// Point to the last backslash
+		for (; (psz > pszPath) && (*psz != _T( '\\' )); psz--, len--);		// Point to the last backslash
 
 		h = FindFirstFile( pszPath, &fd );
 		if (h != INVALID_HANDLE_VALUE) {
@@ -52,7 +50,6 @@ BOOL FileListAddPattern( _Inout_ PFILE_LIST pList, _In_ LPTSTR pszPath, _In_ siz
 }
 
 
-//++ FileListAddFile
 BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 {
 	if (pList && pszFile && *pszFile) {
@@ -69,8 +66,8 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 					size_t len;
 
 					StringCchCopyEx( szPath, ARRAYSIZE( szPath ), pszFile, &psz, &len, 0 );
-					for (; (psz > szPath) && (*(psz - 1) == _T( '\\' ) || *(psz - 1) == _T( '/' )); *(--psz) = _T( '\0' ), len++);		/// Remove trailing backslashes
-					StringCchCopyEx( psz, len, _T( "\\*.*" ), &psz, &len, 0 );		/// Add *.*
+					for (; (psz > szPath) && (*(psz - 1) == _T( '\\' ) || *(psz - 1) == _T( '/' )); *(--psz) = _T( '\0' ), len++);		// Remove trailing backslashes
+					StringCchCopyEx( psz, len, _T( "\\*.*" ), &psz, &len, 0 );		// Add *.*
 					len = ARRAYSIZE( szPath ) - len;
 
 					return FileListAddPattern( pList, szPath, ARRAYSIZE( szPath ), len );
@@ -81,7 +78,7 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 					pList->ppszFiles[pList->Count++] = _tcsdup( pszFile );
 
 					if (pList->Count < FILE_LIST_MAX_COUNT)
-						pList->ppszFiles[pList->Count] = NULL;		/// Make sure the last element in list in NULL
+						pList->ppszFiles[pList->Count] = NULL;		// Make sure the last element in list in NULL
 
 #if _DEBUG || DBG
 					_tprintf( _T( "[d] %hs( %s )\n" ), __FUNCTION__, pszFile );
@@ -118,7 +115,6 @@ BOOL FileListAddFile( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile )
 }
 
 
-//++ FileListAddCatalog
 BOOL FileListAddCatalog( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszCatalog )
 {
 	if (pList && pszCatalog && *pszCatalog) {
@@ -137,14 +133,14 @@ BOOL FileListAddCatalog( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszCatalog )
 			while (_fgetts( szBuf, ARRAYSIZE( szBuf ), f ) != NULL) {
 				if (SUCCEEDED( StringCchLength( szBuf, ARRAYSIZE( szBuf ), &Len ) )) {
 
-					///	Remove trailing EOLN
+					//	Remove trailing EOLN
 					if (Len > 0 && szBuf[Len - 1] == _T( '\n' ))
 						szBuf[--Len] = _T( '\0' );
 
-					/// Expand environment variables
+					// Expand environment variables
 					ExpandEnvironmentStrings( szBuf, szBuf2, ARRAYSIZE( szBuf2 ) );
 
-					/// Add to list
+					// Add to list
 					FileListAddFile( pList, szBuf2 );
 				}
 			}
@@ -157,7 +153,6 @@ BOOL FileListAddCatalog( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszCatalog )
 }
 
 
-//++ FileListDestroy
 BOOL FileListDestroy( _Inout_ PFILE_LIST pList )
 {
 	if (pList) {

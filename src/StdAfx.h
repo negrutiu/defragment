@@ -2,7 +2,7 @@
 
 // Target platform
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500    //_WIN32_WINNT_WIN2K
+#define _WIN32_WINNT 0x0500    // _WIN32_WINNT_WIN2K
 #endif
 
 #define _CRT_SECURE_NO_WARNINGS

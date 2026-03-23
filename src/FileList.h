@@ -19,4 +19,4 @@ BOOL FileListAddCatalog( _Inout_ PFILE_LIST pList, _In_ LPCTSTR pszCatalog );
 
 BOOL FileListDestroy( _Inout_ PFILE_LIST pList );
 
-#endif /// _FILELIST_H_
+#endif

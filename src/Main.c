@@ -53,7 +53,6 @@ DWORD VersionString(HMODULE module, LPCTSTR stringName, LPTSTR stringData, ULONG
 }
 
 
-//++ PrintHeader
 void PrintHeader()
 {
     TCHAR description[64], copyright[128], company[64], version[32];
@@ -158,11 +157,11 @@ LPTSTR FormatError( _In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen 
 		pszError[0] = _T( '\0' );
 		if ((len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
 			if ((len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE, GetModuleHandle( _T( "ntdll" ) ), err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
-				/// Try others...
+				// Try others...
 			}
 		}
 		if (len > 0) {
-			/// Trim trailing noise
+			// Trim trailing noise
 			for (len--; (len > 0) && (pszError[len] == _T( '.' ) || pszError[len] == _T( ' ' ) || pszError[len] == _T( '\r' ) || pszError[len] == _T( '\n' )); len--)
 				pszError[len] = _T( '\0' );
 			len++;
@@ -188,13 +187,13 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 	switch (iStep)
 	{
 		case DEFRAG_STEP_BEFORE_ANALYSIS:
-			///_tprintf( _T( "----- {%hs} Start Analysis...\n" ), __FUNCTION__ );
+			// _tprintf( _T( "----- {%hs} Start Analysis...\n" ), __FUNCTION__ );
 			break;
 		case DEFRAG_STEP_ANALYZE_FILE:
-			///_tprintf( _T( "----- {%hs} Analyze %s\n" ), __FUNCTION__, (LPCTSTR)pParam1 );
+			// _tprintf( _T( "----- {%hs} Analyze %s\n" ), __FUNCTION__, (LPCTSTR)pParam1 );
 			break;
 		case DEFRAG_STEP_BEFORE_MOVE:
-			///_tprintf( _T( "----- {%hs} Start moving {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
+			// _tprintf( _T( "----- {%hs} Start moving {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
 #ifdef ENABLE_PROMPT
 			if (*pbInteractive) {
 
@@ -239,14 +238,14 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 						pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "d" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags &= ~DEFRAG_FLAG_FRAGMENT;
-						return TRUE;	/// Continue defragmenting
+						return TRUE;	// Continue defragmenting
 #ifdef ENABLE_FRAGMENTATION
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "f" ), -1 ) == CSTR_EQUAL) {
 						pOptions->Flags |= DEFRAG_FLAG_FRAGMENT;
-						return TRUE;	/// Continue fragmenting
+						return TRUE;	// Continue fragmenting
 #endif
 					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "q" ), -1 ) == CSTR_EQUAL) {
-						return FALSE;	/// Abort everything
+						return FALSE;	// Abort everything
 					} else {
 						_tprintf( _T( "  Unknown action \"%s\"\n" ), szInput );
 					}
@@ -255,17 +254,16 @@ BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, 
 #endif
 			break;
 		case DEFRAG_STEP_MOVE_FILE:
-			///_tprintf( _T( "----- {%hs} Defragment %s (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+			// _tprintf( _T( "----- {%hs} Defragment %s (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
 			break;
 		case DEFRAG_STEP_MOVE_EXTENT:
-			///_tprintf( _T( "----- {%hs} Defragment %s extent (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+			// _tprintf( _T( "----- {%hs} Defragment %s extent (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
 			break;
 	}
 	return TRUE;
 }
 
 
-//++ _tmain
 int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 {
 #define COMMAND_NONE		0
@@ -295,15 +293,15 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 	PrintHeader();
 
-	/// Allocate data
+	// Allocate data
 	filelist = (PFILE_LIST)HeapAlloc( GetProcessHeap(), 0, sizeof( *filelist ) );
 	if (!filelist)
 		return (int)GetLastError();
 	filelist->Count = 0;
 	filelist->ppszFiles[0] = NULL;
 
-	/// Try to determine whether the first argument is the executable name, or a command (starting with / or --)
-	/// If *not* a command, we'll skip it
+	// Try to determine whether the first argument is the executable name, or a command (starting with / or --)
+	// If *not* a command, we'll skip it
 	i0 = 0;
 	if (argc > 0 && (argv[0][0] != _T( '/' )) && (argv[0][0] != _T( '-' )))
 		i0 = 1;
@@ -391,7 +389,7 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 
 			}
 		}
-	}	/// for
+	}
 
 
 	// Execute command
