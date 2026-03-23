@@ -2,9 +2,8 @@
 
 // Target platform
 #ifndef _WIN32_WINNT
-	#define _WIN32_WINNT 0x0500	///_WIN32_WINNT_WIN2K
+#define _WIN32_WINNT 0x0500    //_WIN32_WINNT_WIN2K
 #endif
-#include <SDKDDKVer.h>
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -12,7 +11,7 @@
 #include <tchar.h>
 #include <stdlib.h>
 
-#include <Windows.h>
+#include <windows.h>
 
 #ifdef __MINGW32__
 #undef __CRT__NO_INLINE
@@ -23,8 +22,8 @@
 #endif
 
 #include <assert.h>
-#if defined (_DEBUG) || defined (DBG)
-	#define verify(expr) assert(expr)
+#if defined(_DEBUG) || defined(DBG)
+#define verify(expr) assert(expr)
 #else
-	#define verify(expr) ((void)(expr))
+#define verify(expr) ((void)(expr))
 #endif
