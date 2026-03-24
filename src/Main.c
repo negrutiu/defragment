@@ -1,12 +1,19 @@
 #include "StdAfx.h"
 #include "Defragment.h"
 #include "FileList.h"
+#include <conio.h>
 
-#define ENABLE_PROMPT
-#define ENABLE_FRAGMENTATION
-#define DEFAULT_TARGET_FRAGMENT_COUNT		5
+#define ENABLE_PROMPT 1UL
+#define ENABLE_FRAGMENTATION 1UL
+#define DEFAULT_TARGET_FRAGMENT_COUNT 5UL
 
 
+/// \brief Read a version string from the module's version resource.
+/// \param module Module handle. If \c NULL, the current executable module is used.
+/// \param stringName The name of the version string to read, for example \c "FileDescription" or \c "CompanyName".
+/// \param stringData Receives the version string data. The caller must provide a buffer of at least \c stringCapacity characters.
+/// \param stringCapacity The size of the \c stringData buffer, in characters.
+/// \return Win32 error code, usually \c ERROR_SUCCESS or \c ERROR_RESOURCE_TYPE_NOT_FOUND.
 DWORD VersionString(HMODULE module, LPCTSTR stringName, LPTSTR stringData, ULONG stringCapacity)
 {
     DWORD err = ERROR_SUCCESS;
@@ -19,27 +26,28 @@ DWORD VersionString(HMODULE module, LPCTSTR stringName, LPTSTR stringData, ULONG
         if (versionRes) {
             HGLOBAL versionGlobal = LoadResource(module, versionRes);
             if (versionGlobal) {
-                void* versionPtr = LockResource(versionGlobal);
+                void *versionPtr = LockResource(versionGlobal);
                 if (versionPtr) {
 
                     struct {
                         WORD language;
                         WORD codepage;
-                    }* codepage;
+                    } *codepage;
                     UINT length = sizeof(*codepage);
 
-                    if (VerQueryValue(versionPtr, L"\\VarFileInfo\\Translation", (LPVOID*)&codepage, &length)) {
-                        TCHAR* stringPtr = NULL;
+                    if (VerQueryValue(versionPtr, L"\\VarFileInfo\\Translation", (LPVOID *)&codepage, &length)) {
+                        TCHAR *stringPtr = NULL;
                         TCHAR subblock[128];
-                        _stprintf_s(subblock, _countof(subblock), _T("\\StringFileInfo\\%04hx%04hx\\%s"), codepage->language, codepage->codepage, stringName);
+                        StringCchPrintf(subblock, _countof(subblock), _T("\\StringFileInfo\\%04hx%04hx\\%s"), codepage->language,
+                                        codepage->codepage, stringName);
 
-                        if (VerQueryValue(versionPtr, subblock, (void**)&stringPtr, &length)) {
-                            _tcsncpy_s(stringData, stringCapacity, stringPtr, length);
+                        if (VerQueryValue(versionPtr, subblock, (void **)&stringPtr, &length)) {
+                            StringCchCopyN(stringData, stringCapacity, stringPtr, length);
                         } else {
-                            err = GetLastError();    // ERROR_RESOURCE_TYPE_NOT_FOUND
+                            err = GetLastError(); // ERROR_RESOURCE_TYPE_NOT_FOUND
                         }
                     } else {
-                        err = GetLastError();    // ERROR_RESOURCE_TYPE_NOT_FOUND
+                        err = GetLastError(); // ERROR_RESOURCE_TYPE_NOT_FOUND
                     }
                 }
             }
@@ -78,268 +86,274 @@ void PrintUsage()
         filename = path;
     }
 
-    _tprintf(
-        _T("Usage:\n")
-        _T("  %s analyze <files>\n")
-        _T("  %s defragment [--compact] [--simulate] <files>\n")
+    _tprintf(_T("Usage:\n")
+             _T("  %s analyze <files>\n")
+             _T("  %s defragment [--compact] [--simulate] <files>\n")
 #ifdef ENABLE_FRAGMENTATION
-        _T("  %s fragment [--count=N] [--simulate] <files>\n")
+             _T("  %s fragment [--count=N] [--simulate] <files>\n")
 #endif
 #ifdef ENABLE_PROMPT
 #ifdef ENABLE_FRAGMENTATION
-        _T("  %s [prompt] [--count=N] [--compact] [--simulate] <files>\n")
+             _T("  %s [prompt] [--count=N] [--compact] [--simulate] <files>\n")
 #else
-        _T("  %s [prompt] [--compact] [--simulate] <files>\n")
+             _T("  %s [prompt] [--compact] [--simulate] <files>\n")
 #endif
 #endif
-        _T("\n")
-        _T("Commands:\n")
-        _T("  analyze     Analyze file fragments\n")
-        _T("  defragment  Defragment files\n")
+             _T("\n")
+             _T("Commands:\n")
+             _T("  analyze     Analyze file fragments\n")
+             _T("  defragment  Defragment files\n")
 #ifdef ENABLE_FRAGMENTATION
-        _T("  fragment    Fragment files\n")
+             _T("  fragment    Fragment files\n")
 #endif
 #ifdef ENABLE_PROMPT
-        _T("  prompt      Interactive mode (default command)\n")
+             _T("  prompt      Interactive mode (default command)\n")
 #endif
-        _T("\n")
-        _T("Options:\n")
-        _T("  --compact   Move files together to a contiguous disk area\n")
+             _T("\n")
+             _T("Options:\n")
+             _T("  --compact   Move files together to a contiguous disk area\n")
 #ifdef ENABLE_FRAGMENTATION
-        _T("  --count=N   Break files into this many fragments. Default is %d\n")
+             _T("  --count=N   Break files into this many fragments. Default is %d\n")
 #endif
-        _T("  --simulate  Conduct a dry run. Nothing is actually written to disk\n")
-        _T("  files       [@]File1 [@]File2 ... [@]FileN\n")
-        _T("\n")
-        _T("Files:\n")
-        _T("  Filenames can be either files or directories. Wildcards are accepted\n")
-        _T("  Filenames prefixed by \"@\" are treated as textfile catalogs (one file per line)\n")
-        _T("\n")
-        _T("Examples:\n")
-        _T("  %s analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File*.jpg\" \"@C:\\Dir with spaces\\Catalog.txt\"\n")
-        _T("  %s defragment --compact --simulate \"@C:\\Dir with spaces\\FileCatalog.txt\"\n")
+             _T("  --simulate  Conduct a dry run. Nothing is actually written to disk\n")
+             _T("  files       [@]File1 [@]File2 ... [@]FileN\n")
+             _T("\n")
+             _T("Files:\n")
+             _T("  Filenames can be either files or directories. Wildcards are accepted\n")
+             _T("  Filenames prefixed by \"@\" are treated as textfile catalogs (one file per line)\n")
+             _T("\n")
+             _T("Examples:\n")
+             _T("  %s analyze C:\\Dir\\File1 \"C:\\Dir with spaces\\File*.jpg\" \"@C:\\Dir with spaces\\Catalog.txt\"\n")
+             _T("  %s defragment --compact --simulate \"@C:\\Dir with spaces\\FileCatalog.txt\"\n")
 #ifdef ENABLE_FRAGMENTATION
-        _T("  %s fragment --count=15 \"C:\\Dir with spaces\\File1.iso\"\n")
+             _T("  %s fragment --count=15 \"C:\\Dir with spaces\\File1.iso\"\n")
 #endif
 #ifdef ENABLE_PROMPT
-        _T("  %s prompt \"@C:\\Dir with spaces\\FileCatalog.txt\"\n")
+             _T("  %s prompt \"@C:\\Dir with spaces\\FileCatalog.txt\"\n")
 #endif
-        _T("\n"),
-        filename,
-        filename,
+             _T("\n"),
+             filename, filename,
 #ifdef ENABLE_FRAGMENTATION
-        filename,
+             filename,
 #endif
 #ifdef ENABLE_PROMPT
-        filename,
+             filename,
 #endif
 #ifdef ENABLE_FRAGMENTATION
-        DEFAULT_TARGET_FRAGMENT_COUNT,
+             DEFAULT_TARGET_FRAGMENT_COUNT,
 #endif
-        filename,
-        filename
+             filename, filename
 #ifdef ENABLE_PROMPT
-        ,
-        filename
+             ,
+             filename
 #endif
 #ifdef ENABLE_FRAGMENTATION
-        ,
-        filename
+             ,
+             filename
 #endif
     );
 }
 
 
-LPTSTR FormatError( _In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen )
+/// \brief Format a Win32 error code into a human-readable string.
+/// \return The \p pszError buffer pointer for convenience.
+LPTSTR FormatError(_In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen)
 {
-	if (pszError && iErrorLen) {
-		DWORD len = 0;
-		pszError[0] = _T( '\0' );
-		if ((len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
-			if ((len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE, GetModuleHandle( _T( "ntdll" ) ), err, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), pszError, iErrorLen, NULL )) == 0) {
-				// Try others...
-			}
-		}
-		if (len > 0) {
-			// Trim trailing noise
-			for (len--; (len > 0) && (pszError[len] == _T( '.' ) || pszError[len] == _T( ' ' ) || pszError[len] == _T( '\r' ) || pszError[len] == _T( '\n' )); len--)
-				pszError[len] = _T( '\0' );
-			len++;
-		}
-	}
-	return pszError;
+    if (pszError && iErrorLen) {
+        DWORD len = 0;
+        pszError[0] = _T('\0');
+        if ((len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), pszError, iErrorLen,
+                                 NULL)) == 0) {
+            if ((len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE, GetModuleHandle(_T("ntdll")), err,
+                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), pszError, iErrorLen, NULL)) == 0) {
+                // Try others...
+            }
+        }
+        if (len > 0) {
+            // Trim trailing noise
+            for (len--; (len > 0) &&
+                        (pszError[len] == _T('.') || pszError[len] == _T(' ') || pszError[len] == _T('\r') || pszError[len] == _T('\n'));
+                 len--)
+                pszError[len] = _T('\0');
+            len++;
+        }
+    }
+    return pszError;
 }
 
 
-VOID DefragLog( _In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_ ... )
+/// \brief Global logging callback function.
+VOID DefragLog(_In_ LPVOID lpParam, _In_ LPCTSTR pszFmt, _In_...)
 {
-	va_list args;
-	UNREFERENCED_PARAMETER( lpParam );
-	va_start( args, pszFmt );
-	_vtprintf( pszFmt, args );
-	va_end( args );
+    va_list args;
+    UNREFERENCED_PARAMETER(lpParam);
+    va_start(args, pszFmt);
+    _vtprintf(pszFmt, args);
+    va_end(args);
 }
 
 
-BOOL DefragTrace( _In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _In_opt_ LPVOID pParam2 )
+/// \brief Global tracing callback function.
+BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _In_opt_ LPVOID pParam2)
 {
-	LPBOOL pbInteractive = (LPBOOL)lpParam;
-	switch (iStep)
-	{
-		case DEFRAG_STEP_BEFORE_ANALYSIS:
-			// _tprintf( _T( "----- {%hs} Start Analysis...\n" ), __FUNCTION__ );
-			break;
-		case DEFRAG_STEP_ANALYZE_FILE:
-			// _tprintf( _T( "----- {%hs} Analyze %s\n" ), __FUNCTION__, (LPCTSTR)pParam1 );
-			break;
-		case DEFRAG_STEP_BEFORE_MOVE:
-			// _tprintf( _T( "----- {%hs} Start moving {Flags:0x%x, Interactive:%s}\n" ), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags, *pbInteractive ? _T( "true" ) : _T( "false" ) );
+    LPBOOL pbInteractive = (LPBOOL)lpParam;
+    switch (iStep) {
+    case DEFRAG_STEP_BEFORE_ANALYSIS:
+        // _tprintf( _T("----- {%hs} Start Analysis...\n"), __FUNCTION__ );
+        break;
+    case DEFRAG_STEP_ANALYZE_FILE:
+        // _tprintf( _T("----- {%hs} Analyze %s\n"), __FUNCTION__, (LPCTSTR)pParam1 );
+        break;
+    case DEFRAG_STEP_BEFORE_MOVE:
+        // _tprintf( _T("----- {%hs} Start moving {Flags:0x%x, Interactive:%s}\n"), __FUNCTION__, ((PDEFRAG_OPTIONS)pParam1)->Flags,
+        // *pbInteractive ? _T("true") : _T("false") );
 #ifdef ENABLE_PROMPT
-			if (*pbInteractive) {
+        if (*pbInteractive) {
 
-				TCHAR szInput[256];
-				PDEFRAG_OPTIONS pOptions = (PDEFRAG_OPTIONS)pParam1;
-				assert( pOptions );
+            TCHAR szInput[256];
+            PDEFRAG_OPTIONS pOptions = (PDEFRAG_OPTIONS)pParam1;
+            assert(pOptions);
 
-				_tprintf(
-					_T( "\n" )
-					_T( "Actions:\n" )
-					_T( "  s         Toggle simulation ON or OFF\n" )
-					_T( "  c         Toggle compact defragmenting ON or OFF\n" )
+            _tprintf(_T("\n")
+                     _T("Actions:\n")
+                     _T("  s         Toggle simulation ON or OFF\n")
+                     _T("  c         Toggle compact defragmenting ON or OFF\n")
 #ifdef ENABLE_FRAGMENTATION
-					_T( "  fc <N>    Set target fragment count\n" )
+                     _T("  fc <N>    Set target fragment count\n")
 #endif
-					_T( "\n" )
-					_T( "  d         Begin defragmenting files\n" )
+                     _T("\n")
+                     _T("  d         Begin defragmenting files\n")
 #ifdef ENABLE_FRAGMENTATION
-					_T( "  f         Begin fragmenting files\n" )
+                     _T("  f         Begin fragmenting files\n")
 #endif
-					_T( "  q         Quit\n" )
-					_T( "\n" )
-				);
+                     _T("  q         Quit\n")
+                     _T("\n"));
 
-				while( TRUE ) {
-					
+            while (TRUE) {
+
 #ifdef ENABLE_FRAGMENTATION
-					_tprintf( _T( "Action (Simulate:%s, Compact:%s, Fragmentats:%u) : " ), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ), pOptions->TargetFragmentCount );
+                _tprintf(_T("Action (simulate:%s, compact:%s, fragments:%u) : "),
+                         pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T("ON") : _T("OFF"),
+                         pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T("ON") : _T("OFF"), pOptions->TargetFragmentCount);
 #else
-					_tprintf( _T( "Action (Simulate:%s, Compact:%s) : " ), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T( "ON" ) : _T( "OFF" ), pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T( "ON" ) : _T( "OFF" ) );
+                _tprintf(_T("Action (simulate:%s, compact:%s) : "), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T("ON") : _T("OFF"),
+                         pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T("ON") : _T("OFF"));
 #endif
-					
-					_tscanf( _T( "%255s" ), szInput );
-					if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "c" ), -1 ) == CSTR_EQUAL) {
-						pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
+
+                _tscanf(_T("%255s"), szInput);
+                if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("c"), -1) == CSTR_EQUAL) {
+                    pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
 #ifdef ENABLE_FRAGMENTATION
-					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "fc" ), -1 ) == CSTR_EQUAL) {
-						_tscanf( _T( "%255s" ), szInput );
-						pOptions->TargetFragmentCount = (ULONG)_tcstoul( szInput, NULL, 10 );
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("fc"), -1) == CSTR_EQUAL) {
+                    _tscanf(_T("%255s"), szInput);
+                    pOptions->TargetFragmentCount = (ULONG)_tcstoul(szInput, NULL, 10);
 #endif
-					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "s" ), -1 ) == CSTR_EQUAL) {
-						pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
-					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "d" ), -1 ) == CSTR_EQUAL) {
-						pOptions->Flags &= ~DEFRAG_FLAG_FRAGMENT;
-						return TRUE;	// Continue defragmenting
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("s"), -1) == CSTR_EQUAL) {
+                    pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("d"), -1) == CSTR_EQUAL) {
+                    pOptions->Flags &= ~DEFRAG_FLAG_FRAGMENT;
+                    return TRUE; // Continue defragmenting
 #ifdef ENABLE_FRAGMENTATION
-					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "f" ), -1 ) == CSTR_EQUAL) {
-						pOptions->Flags |= DEFRAG_FLAG_FRAGMENT;
-						return TRUE;	// Continue fragmenting
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("f"), -1) == CSTR_EQUAL) {
+                    pOptions->Flags |= DEFRAG_FLAG_FRAGMENT;
+                    return TRUE; // Continue fragmenting
 #endif
-					} else if (CompareString( CP_ACP, NORM_IGNORECASE, szInput, -1, _T( "q" ), -1 ) == CSTR_EQUAL) {
-						return FALSE;	// Abort everything
-					} else {
-						_tprintf( _T( "  Unknown action \"%s\"\n" ), szInput );
-					}
-				}
-			}
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("q"), -1) == CSTR_EQUAL) {
+                    return FALSE; // Abort everything
+                } else {
+                    _tprintf(_T("  Unknown action \"%s\"\n"), szInput);
+                }
+            }
+        }
 #endif
-			break;
-		case DEFRAG_STEP_MOVE_FILE:
-			// _tprintf( _T( "----- {%hs} Defragment %s (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
-			break;
-		case DEFRAG_STEP_MOVE_EXTENT:
-			// _tprintf( _T( "----- {%hs} Defragment %s extent (%I64u bytes)\n" ), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
-			break;
-	}
-	return TRUE;
+        break;
+    case DEFRAG_STEP_MOVE_FILE:
+        // _tprintf( _T("----- {%hs} Defragment %s (%I64u bytes)\n"), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+        break;
+    case DEFRAG_STEP_MOVE_EXTENT:
+        // _tprintf( _T("----- {%hs} Defragment %s extent (%I64u bytes)\n"), __FUNCTION__, (LPCTSTR)pParam1, *(PLONG64)pParam2 );
+        break;
+    }
+    return TRUE;
 }
 
 
-int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
+int __cdecl _tmain(_In_ int argc, _In_ _TCHAR *argv[], _In_ _TCHAR *envp[])
 {
-#define COMMAND_NONE		0
-#define COMMAND_ANALYZE		1
-#define COMMAND_DEFRAG		2	// defragment, fragment, prompt
+#define COMMAND_NONE 0
+#define COMMAND_ANALYZE 1
+#define COMMAND_DEFRAG 2 // defragment, fragment, prompt
 
-	DWORD err = ERROR_SUCCESS;
-	ULONG command = COMMAND_NONE;
-	DEFRAG_OPTIONS options = {0};
-	BOOL prompt = FALSE;
-	int i, i0;
-	PFILE_LIST filelist = NULL;
+    DWORD err = ERROR_SUCCESS;
+    ULONG command = COMMAND_NONE;
+    DEFRAG_OPTIONS options = {0};
+    BOOL prompt = FALSE;
+    int i, i0;
+    PFILE_LIST filelist = NULL;
 
 #ifdef _M_IX86
-	typedef BOOL(WINAPI * TypeWow64DisableWow64FsRedirection)(PVOID * ppOldValue);
+    // Disable Wow64 file system redirection
+    typedef BOOL(WINAPI * TypeWow64DisableWow64FsRedirection)(PVOID * ppOldValue);
     typedef BOOL(WINAPI * TypeWow64RevertWow64FsRedirection)(PVOID pOlValue);
     TypeWow64DisableWow64FsRedirection fnDisableRedirection =
         (TypeWow64DisableWow64FsRedirection)GetProcAddress(GetModuleHandle(_T("kernel32")), "Wow64DisableWow64FsRedirection");
-	TypeWow64RevertWow64FsRedirection fnRevertRedirection =
+    TypeWow64RevertWow64FsRedirection fnRevertRedirection =
         (TypeWow64RevertWow64FsRedirection)GetProcAddress(GetModuleHandle(_T("kernel32")), "Wow64RevertWow64FsRedirection");
 
     PVOID pRedirectionState = NULL;
-	if (fnDisableRedirection) {
+    if (fnDisableRedirection) {
         fnDisableRedirection(&pRedirectionState);
     }
 #endif
 
-	PrintHeader();
+    PrintHeader();
 
-	// Allocate data
-	filelist = (PFILE_LIST)HeapAlloc( GetProcessHeap(), 0, sizeof( *filelist ) );
-	if (!filelist)
-		return (int)GetLastError();
-	filelist->Count = 0;
-	filelist->ppszFiles[0] = NULL;
+    // Allocate data
+    filelist = (PFILE_LIST)HeapAlloc(GetProcessHeap(), 0, sizeof(*filelist));
+    if (!filelist)
+        return (int)GetLastError();
+    filelist->Count = 0;
+    filelist->ppszFiles[0] = NULL;
 
-	// Try to determine whether the first argument is the executable name, or a command (starting with / or --)
-	// If *not* a command, we'll skip it
-	i0 = 0;
-	if (argc > 0 && (argv[0][0] != _T( '/' )) && (argv[0][0] != _T( '-' )))
-		i0 = 1;
+    // Try to determine whether the first argument is the executable name, or a command (starting with / or --)
+    // If *not* a command, we'll skip it
+    i0 = 0;
+    if (argc > 0 && (argv[0][0] != _T('/')) && (argv[0][0] != _T('-')))
+        i0 = 1;
 
-	// Command line
-	for (i = i0; i < argc; i++)
-	{
-		// Commands
-		if (command == COMMAND_NONE && CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "analyze" ), -1 ) == CSTR_EQUAL) {
+    // Command line
+    for (i = i0; i < argc; i++) {
+        // Commands
+        if (command == COMMAND_NONE && CompareString(CP_ACP, NORM_IGNORECASE, argv[i], -1, _T("analyze"), -1) == CSTR_EQUAL) {
 
-			command = COMMAND_ANALYZE;
+            command = COMMAND_ANALYZE;
 
-		} else if (command == COMMAND_NONE && (CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defrag" ), -1 ) == CSTR_EQUAL || CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "defragment" ), -1 ) == CSTR_EQUAL)) {
+        } else if (command == COMMAND_NONE && (CompareString(CP_ACP, NORM_IGNORECASE, argv[i], -1, _T("defrag"), -1) == CSTR_EQUAL ||
+                                               CompareString(CP_ACP, NORM_IGNORECASE, argv[i], -1, _T("defragment"), -1) == CSTR_EQUAL)) {
 
-			command = COMMAND_DEFRAG;
-			options.Flags &= ~DEFRAG_FLAG_FRAGMENT;
-			options.TargetFragmentCount = 0;
+            command = COMMAND_DEFRAG;
+            options.Flags &= ~DEFRAG_FLAG_FRAGMENT;
+            options.TargetFragmentCount = 0;
 
 #ifdef ENABLE_FRAGMENTATION
-		} else if (command == COMMAND_NONE && CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "fragment" ), -1 ) == CSTR_EQUAL) {
+        } else if (command == COMMAND_NONE && CompareString(CP_ACP, NORM_IGNORECASE, argv[i], -1, _T("fragment"), -1) == CSTR_EQUAL) {
 
-			command = COMMAND_DEFRAG;
-			options.Flags |= DEFRAG_FLAG_FRAGMENT;
-			options.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
+            command = COMMAND_DEFRAG;
+            options.Flags |= DEFRAG_FLAG_FRAGMENT;
+            options.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
 #endif
 #ifdef ENABLE_PROMPT
-		} else if (command == COMMAND_NONE && CompareString( CP_ACP, NORM_IGNORECASE, argv[i], -1, _T( "prompt" ), -1 ) == CSTR_EQUAL) {
+        } else if (command == COMMAND_NONE && CompareString(CP_ACP, NORM_IGNORECASE, argv[i], -1, _T("prompt"), -1) == CSTR_EQUAL) {
 
-			prompt = TRUE;
-			command = COMMAND_DEFRAG;
-			options.Flags &= ~DEFRAG_FLAG_FRAGMENT;
-			options.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
+            prompt = TRUE;
+            command = COMMAND_DEFRAG;
+            options.Flags &= ~DEFRAG_FLAG_FRAGMENT;
+            options.TargetFragmentCount = DEFAULT_TARGET_FRAGMENT_COUNT;
 #endif
-		} else {
+        } else {
 
-			if (command == COMMAND_NONE)
-            {
-				// no command specified. use defaults
+            if (command == COMMAND_NONE) {
+                // no command specified. use defaults
 #ifdef ENABLE_PROMPT
                 prompt = TRUE;
                 command = COMMAND_DEFRAG;
@@ -348,11 +362,10 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
 #else
                 command = COMMAND_ANALYZE;
 #endif
-
             }
 
-			// Options
-			if (argv[i][0] == _T( '-' ) || argv[i][0] == _T( '/' )) {
+            // Options
+            if (argv[i][0] == _T('-') || argv[i][0] == _T('/')) {
 
                 LPCTSTR option = argv[i] + 1;
                 if (option[0] == _T('-')) {
@@ -360,81 +373,80 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
                 }
 
                 if ((command == COMMAND_DEFRAG) && !(options.Flags & DEFRAG_FLAG_FRAGMENT) &&
-                    (CompareString(CP_ACP, NORM_IGNORECASE, option, -1, _T( "compact" ), -1) == CSTR_EQUAL))
-                {
+                    (CompareString(CP_ACP, NORM_IGNORECASE, option, -1, _T("compact"), -1) == CSTR_EQUAL)) {
 
-					options.Flags |= DEFRAG_FLAG_COMPACT;
+                    options.Flags |= DEFRAG_FLAG_COMPACT;
 
 #ifdef ENABLE_FRAGMENTATION
-				} else if ((command == COMMAND_DEFRAG) && (CompareString( CP_ACP, NORM_IGNORECASE, option, 6, _T( "count=" ), -1 ) == CSTR_EQUAL) && (i + 1 < argc)) {
+                } else if ((command == COMMAND_DEFRAG) &&
+                           (CompareString(CP_ACP, NORM_IGNORECASE, option, 6, _T("count="), -1) == CSTR_EQUAL) && (i + 1 < argc)) {
 
-					options.TargetFragmentCount = (ULONG)_tcstoul( option + 6, NULL, 10 );	// --count=123
+                    options.TargetFragmentCount = (ULONG)_tcstoul(option + 6, NULL, 10); // --count=123
 #endif
-				} else if ((command == COMMAND_DEFRAG) && (CompareString( CP_ACP, NORM_IGNORECASE, option, -1, _T( "simulate" ), -1 ) == CSTR_EQUAL)) {
+                } else if ((command == COMMAND_DEFRAG) &&
+                           (CompareString(CP_ACP, NORM_IGNORECASE, option, -1, _T("simulate"), -1) == CSTR_EQUAL)) {
 
-					options.Flags |= DEFRAG_FLAG_SIMULATE;
-				
-				} else {
-					_tprintf( _T( "WARNING: Unexpected option \"%s\"\n" ), argv[i] );
-				}
+                    options.Flags |= DEFRAG_FLAG_SIMULATE;
 
-			} else {
+                } else {
+                    _tprintf(_T("WARNING: Unexpected option \"%s\"\n"), argv[i]);
+                }
 
-				// Files
-				if (argv[i][0] == _T( '@' )) {
-					FileListAddCatalog( filelist, argv[i] + 1 );
-				} else {
-					FileListAddFile( filelist, argv[i] );
-				}
+            } else {
 
-			}
-		}
-	}
+                // Files
+                if (argv[i][0] == _T('@')) {
+                    FileListAddCatalog(filelist, argv[i] + 1);
+                } else {
+                    FileListAddFile(filelist, argv[i]);
+                }
+            }
+        }
+    }
 
 
-	// Execute command
-	options.fnLogging = DefragLog;
-	options.lpLoggingParam = NULL;
-	options.fnTracing = DefragTrace;
-	options.lpTracingParam = &prompt;
+    // Execute command
+    options.fnLogging = DefragLog;
+    options.lpLoggingParam = NULL;
+    options.fnTracing = DefragTrace;
+    options.lpTracingParam = &prompt;
 
-	switch (command)
-	{
-		case COMMAND_ANALYZE:
-			_tprintf( _T( "\n" ) );
-			err = DefragAnalyzeFiles( filelist->ppszFiles, &options, NULL );
-			if (TRUE) {
-				TCHAR szError[255];
-				_tprintf( _T( "\n" ) );
-				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
-			}
-			break;
+    switch (command) {
+    case COMMAND_ANALYZE:
+        _tprintf(_T("\n"));
+        err = DefragAnalyzeFiles(filelist->ppszFiles, &options, NULL);
+        if (TRUE) {
+            TCHAR szError[255];
+            _tprintf(_T("\n"));
+            _tprintf(_T("Error 0x%x \"%s\"\n"), err, FormatError(err, szError, ARRAYSIZE(szError)));
+        }
+        break;
 
-		case COMMAND_DEFRAG:
-			_tprintf( _T( "\n" ) );
-			err = DefragMoveFiles( filelist->ppszFiles, &options, NULL );
-			if (TRUE) {
-				TCHAR szError[255];
-				_tprintf( _T( "\n" ) );
-				_tprintf( _T( "Error 0x%x \"%s\"\n" ), err, FormatError( err, szError, ARRAYSIZE( szError ) ) );
-			}
-			break;
+    case COMMAND_DEFRAG:
+        _tprintf(_T("\n"));
+        err = DefragMoveFiles(filelist->ppszFiles, &options, NULL);
+        if (TRUE) {
+            TCHAR szError[255];
+            _tprintf(_T("\n"));
+            _tprintf(_T("Error 0x%x \"%s\"\n"), err, FormatError(err, szError, ARRAYSIZE(szError)));
+        }
+        break;
 
-		default:
-			err = ERROR_INVALID_PARAMETER;
-			PrintUsage();
-			_tprintf( _T( "ERROR: Invalid command\n" ) );
-	}
+    default:
+        err = ERROR_INVALID_PARAMETER;
+        PrintUsage();
+        _tprintf(_T("ERROR: Invalid command\n"));
+    }
 
-	FileListDestroy( filelist );
-	HeapFree( GetProcessHeap(), 0, filelist );
+    FileListDestroy(filelist);
+    HeapFree(GetProcessHeap(), 0, filelist);
 
-	// Pause
-	if (prompt && (err != ERROR_REQUEST_ABORTED)) {
-		_tprintf( _T( "Press any key to exit . . . " ) );
-		_gettch();
-		_tprintf( _T( "\n" ) );
-	}
+    // Pause
+    if (prompt && (err != ERROR_REQUEST_ABORTED)) {
+        _tprintf(_T("Press any key to exit . . . "));
+        _getch(); // note: _getwch doesn't exist in Windows 2000 and older
+        _tprintf(_T("\n"));
+    }
 
 #ifdef _M_IX86
     if (fnRevertRedirection) {
@@ -442,5 +454,5 @@ int __cdecl _tmain( _In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[] )
     }
 #endif
 
-	return (int)err;
+    return (int)err;
 }
