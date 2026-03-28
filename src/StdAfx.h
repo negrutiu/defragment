@@ -13,13 +13,7 @@
 
 #include <windows.h>
 
-#ifdef __MINGW32__
-#undef __CRT__NO_INLINE
-#endif
 #include <strsafe.h>
-#ifdef __MINGW32__
-#define __CRT__NO_INLINE
-#endif
 
 #include <assert.h>
 #if defined(_DEBUG) || defined(DBG)

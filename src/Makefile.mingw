@@ -29,6 +29,7 @@ _BIN     = $(patsubst %,$(OUTDIR)/%,$(BIN))
 # -------------------------------
 
 #
+# https://gcc.gnu.org/onlinedocs/gcc/Cygwin-and-MinGW-Options.html
 # https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html
 # http://linux.die.net/man/1/gcc
 # http://linux.die.net/man/1/ld

@@ -49,6 +49,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Remove default mingw (windows)
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          rename "C:\mingw32" "C:\mingw32.bak" 2> nul
+          rename "C:\mingw64" "C:\mingw64.bak" 2> nul
+          exit /b 0
+
+      # The default mingw on Windows runners is built for UCRT runtime library.
+      # We replace it with winlibs/mingw-w64 built for MSVCRT.
+      # - https://winlibs.com/
+      # - https://github.com/brechtsanders/winlibs_mingw/tags
+      # - https://github.com/marketplace/actions/setup-winlibs
+      - name: Install winlibs/mingw32 (windows)
+        if: startsWith(matrix.os, 'windows')
+        uses: bwoodsend/setup-winlibs-action@v1
+        with:
+          tag: 15.2.0posix-13.0.0-msvcrt-r6
+          with_clang: false
+          destination: C:/
+          add_to_path: false
+          architecture: i686
+
+      - name: Install winlibs/mingw64 (windows)
+        if: startsWith(matrix.os, 'windows')
+        uses: bwoodsend/setup-winlibs-action@v1
+        with:
+          tag: 15.2.0posix-13.0.0-msvcrt-r6
+          with_clang: false
+          destination: C:/
+          add_to_path: false
+          architecture: x86_64
+
       - name: Install mingw-w64 (linux)
         if: startsWith(matrix.os, 'ubuntu')
         run: sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mingw-w64
