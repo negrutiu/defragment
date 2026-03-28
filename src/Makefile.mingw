@@ -76,6 +76,7 @@ CFLAGS += \
 
 LDFLAGS += \
   $(CFLAGS) \
+  -static \
   -Wl,--gc-sections \
   -Wl,--no-seh \
   -Wl,--nxcompat \
