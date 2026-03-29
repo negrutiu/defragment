@@ -216,16 +216,15 @@ BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _
 
             _tprintf(_T("\n")
                      _T("Actions:\n")
-                     _T("  s         Toggle simulation ON or OFF\n")
-                     _T("  c         Toggle compact defragmenting ON or OFF\n")
-#ifdef ENABLE_FRAGMENTATION
-                     _T("  fc <N>    Set target fragment count\n")
-#endif
+                     _T("> d         Begin defragmenting files\n")
+                     _T("  dc        Toggle compact defragmenting ON or OFF\n")
                      _T("\n")
-                     _T("  d         Begin defragmenting files\n")
 #ifdef ENABLE_FRAGMENTATION
-                     _T("  f         Begin fragmenting files\n")
+                     _T("> f         Begin fragmenting files\n")
+                     _T("  fc <N>    Set target fragment count\n")
+                     _T("\n")
 #endif
+                     _T("  s         Toggle simulation ON or OFF\n")
                      _T("  q         Quit\n")
                      _T("\n"));
 
@@ -241,23 +240,21 @@ BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _
 #endif
 
                 _tscanf(_T("%255s"), szInput);
-                if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("c"), -1) == CSTR_EQUAL) {
+                if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("dc"), -1) == CSTR_EQUAL) {
                     pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
-#ifdef ENABLE_FRAGMENTATION
-                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("fc"), -1) == CSTR_EQUAL) {
-                    _tscanf(_T("%255s"), szInput);
-                    pOptions->TargetFragmentCount = (ULONG)_tcstoul(szInput, NULL, 10);
-#endif
-                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("s"), -1) == CSTR_EQUAL) {
-                    pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("d"), -1) == CSTR_EQUAL) {
                     pOptions->Flags &= ~DEFRAG_FLAG_FRAGMENT;
                     return TRUE; // Continue defragmenting
 #ifdef ENABLE_FRAGMENTATION
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("fc"), -1) == CSTR_EQUAL) {
+                    _tscanf(_T("%255s"), szInput);
+                    pOptions->TargetFragmentCount = (ULONG)_tcstoul(szInput, NULL, 10);
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("f"), -1) == CSTR_EQUAL) {
                     pOptions->Flags |= DEFRAG_FLAG_FRAGMENT;
                     return TRUE; // Continue fragmenting
 #endif
+                } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("s"), -1) == CSTR_EQUAL) {
+                    pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("q"), -1) == CSTR_EQUAL) {
                     return FALSE; // Abort everything
                 } else {

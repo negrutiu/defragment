@@ -154,6 +154,9 @@ DWORD DefragGetVolumeBitmap(_In_ HANDLE hVolume, _Out_ VOLUME_BITMAP_BUFFER **pp
                 } else {
 
                     // Other error
+#if _DEBUG || DBG
+                    _tprintf(_T("[d] DeviceIoControl(FSCTL_GET_VOLUME_BITMAP) = 0x%x\n"), err);
+#endif
                     break;
                 }
             }
@@ -231,7 +234,7 @@ DWORD DefragBitmapFindMaxUnused(_In_ const VOLUME_BITMAP_BUFFER *pBitmap, _Out_ 
 
 
 /// \brief Search the volume for the first available disk area of at least the specified size (in clusters).
-DWORD DefragBitmapFindUnused(_In_ VOLUME_BITMAP_BUFFER *pBitmap, _In_ LONG64 iClusterCount, _Out_ PLONG64 pLcn)
+DWORD DefragBitmapFindUnused(_In_ const VOLUME_BITMAP_BUFFER *pBitmap, _In_ LONG64 iClusterCount, _Out_ PLONG64 pLcn)
 {
     DWORD err = ERROR_SUCCESS;
 
@@ -365,6 +368,9 @@ DWORD DefragGetFileRetrievalPointers(_In_ HANDLE hFile, _Out_ RETRIEVAL_POINTERS
                 } else {
 
                     // Other error
+#if _DEBUG || DBG
+                    _tprintf(_T("[d] DeviceIoControl(FSCTL_GET_RETRIEVAL_POINTERS) = 0x%x\n"), err);
+#endif
                     break;
                 }
             }
@@ -665,7 +671,7 @@ DWORD DefragDataFragment(_In_ DEFRAG_FILES *Data)
                 break;
             }
 #if _DEBUG || DBG
-            Log(Data, _T("  [d]    Largest free extent found at Lcn:0x%Ix-0x%Ix (%u clusters)\n"), TargetExtentLcn,
+            Log(Data, _T("  [d]    Largest free extent found at Lcn:0x%I64x-0x%I64x (%I64u clusters)\n"), TargetExtentLcn,
                 TargetExtentLcn + TargetExtentMaxSize, TargetExtentMaxSize);
 #endif
 
@@ -692,7 +698,7 @@ DWORD DefragDataFragment(_In_ DEFRAG_FILES *Data)
                 mfd.ClusterCount = (DWORD)min(TargetExtentSize, SourceExtentSize);
 
                 {
-                    LONG64 ExtentSize = mfd.ClusterCount * f->ClusterSize;
+                    LONG64 ExtentSize = (LONG64)mfd.ClusterCount * f->ClusterSize;
                     if (!Trace(Data, DEFRAG_STEP_MOVE_EXTENT, f->Path, &ExtentSize))
                         return ERROR_REQUEST_ABORTED;
                 }
@@ -938,7 +944,7 @@ DWORD DefragDataMoveFiles(_In_ DEFRAG_FILES *Data)
                     Log(Data, _T("  Clusters moved: %I64u\n"), Data->Move.ClusterCount);
                     Log(Data, _T("  Bytes moved:    %I64u\n"), Data->Move.TotalSize);
                     if (Data->Options.Flags & DEFRAG_FLAG_SIMULATE)
-                        Log(Data, _T("  Note:           Nothing was written to disk (simulation active)\n"), 0);
+                        Log(Data, _T("  Note:           Nothing was written to disk (simulation)\n"), 0);
                 }
 
             } else {
