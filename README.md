@@ -21,6 +21,17 @@ defragment.exe prompt "C:\Dir\File*.ext" "@C:\Dir\FileCatalog.txt"
 
 See full usage instructions by running `defragment.exe` with no arguments.
 
+## Integration
+Create a shortcut to `defragment.exe` and place it in the `Send to` folder for easy access.
+> [!IMPORTANT]
+> Remember to replace `<path>\defragment.exe` in the command below.
+```cmd
+powershell -ExecutionPolicy Bypass -c "$lnk = (New-Object -ComObject WScript.Shell).CreateShortcut($env:APPDATA+'\Microsoft\Windows\SendTo\Defragment Files.lnk'); $lnk.TargetPath='<path>\defragment.exe'; $lnk.Arguments='prompt'; $lnk.Save()"
+```
+
+## Requirements
+Windows XP up to latest Windows 11.
+
 ## License
 This project is licensed under the [MIT License](LICENSE).  
 Third-party assets with different terms are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
