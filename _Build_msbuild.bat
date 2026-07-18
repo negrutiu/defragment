@@ -15,17 +15,15 @@ for /f "delims=*" %%i in ('dir /b /od *.sln 2^> nul') do set solution=%%~fi
 
 rem | ------------------------------------------------------------
 
-if not exist "%PF%" set PF=%PROGRAMFILES(X86)%
-if not exist "%PF%" set PF=%PROGRAMFILES%
-set vswhere=%PF%\Microsoft Visual Studio\Installer\vswhere.exe
-if not exist "%vcvarsall%" for /f "tokens=1* delims=: " %%i in ('"%vswhere%" -version 17 -requires Microsoft.Component.MSBuild 2^> NUL') do if /i "%%i"=="installationPath" set vcvarsall=%%j\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v143
-if not exist "%vcvarsall%" for /f "tokens=1* delims=: " %%i in ('"%vswhere%" -version 16 -requires Microsoft.Component.MSBuild 2^> NUL') do if /i "%%i"=="installationPath" set vcvarsall=%%j\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v142
-if not exist "%vcvarsall%" for /f "tokens=1* delims=: " %%i in ('"%vswhere%" -version 15 -requires Microsoft.Component.MSBuild 2^> NUL') do if /i "%%i"=="installationPath" set vcvarsall=%%j\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v141
-if not exist "%vcvarsall%" set vcvarsall=%PF%\Microsoft Visual Studio 14.0\VC\VcVarsAll.bat&& set toolset=v140
-if not exist "%vcvarsall%" set vcvarsall=%PF%\Microsoft Visual Studio 12.0\VC\VcVarsAll.bat&& set toolset=v120
-if not exist "%vcvarsall%" set vcvarsall=%PF%\Microsoft Visual Studio 11.0\VC\VcVarsAll.bat&& set toolset=v110
-if not exist "%vcvarsall%" set vcvarsall=%PF%\Microsoft Visual Studio 10.0\VC\VcVarsAll.bat&& set toolset=v100
-if not exist "%vcvarsall%" echo ERROR: Can't find Visual Studio 2010-2022 && exit /b 2
+if not exist "%vswhere%" set vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+if not exist "%vswhere%" set vswhere=%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe
+if not exist "%vswhere%" echo ERROR: Missing "vswhere.exe"&& pause && exit /b 1
+
+if not exist "%vcvarsall%" for /f "delims=*" %%i in ('"%vswhere%" -version [18^,19^) -prerelease -requires Microsoft.Component.MSBuild -property installationPath 2^> nul') do set vcvarsall=%%i\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v145
+if not exist "%vcvarsall%" for /f "delims=*" %%i in ('"%vswhere%" -version [17^,18^) -prerelease -requires Microsoft.Component.MSBuild -property installationPath 2^> nul') do set vcvarsall=%%i\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v143
+if not exist "%vcvarsall%" for /f "delims=*" %%i in ('"%vswhere%" -version [16^,17^) -prerelease -requires Microsoft.Component.MSBuild -property installationPath 2^> nul') do set vcvarsall=%%i\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v142
+if not exist "%vcvarsall%" for /f "delims=*" %%i in ('"%vswhere%" -version [15^,16^) -prerelease -requires Microsoft.Component.MSBuild -property installationPath 2^> nul') do set vcvarsall=%%i\VC\Auxiliary\Build\VCVarsAll.bat&& set toolset=v141
+if not exist "%vcvarsall%" echo ERROR: Missing "Visual Studio 2017-2026"&& pause && exit /b 2
 
 rem | ------------------------------------------------------------
 
