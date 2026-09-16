@@ -69,7 +69,7 @@ BOOL FileListAddFile(_Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile)
                     for (; (psz > szPath) && (*(psz - 1) == _T('\\') || *(psz - 1) == _T('/')); *(--psz) = _T('\0'), len++) {
                         // Remove trailing backslashes
                     }
-                    StringCchCopyEx(psz, len, _T("\\*.*"), &psz, &len, 0); // Add *.*
+                    StringCchCopyEx(psz, len, _T("\\*.*"), &psz, &len, 0);    // Add *.*
                     len = ARRAYSIZE(szPath) - len;
 
                     return FileListAddPattern(pList, szPath, ARRAYSIZE(szPath), len);
@@ -80,7 +80,7 @@ BOOL FileListAddFile(_Inout_ PFILE_LIST pList, _In_ LPCTSTR pszFile)
                     pList->ppszFiles[pList->Count++] = _tcsdup(pszFile);
 
                     if (pList->Count < FILE_LIST_MAX_COUNT)
-                        pList->ppszFiles[pList->Count] = NULL; // Make sure the last element in list in NULL
+                        pList->ppszFiles[pList->Count] = NULL;    // Make sure the last element in list in NULL
 
 #if _DEBUG || DBG
                     _tprintf(_T("[d] %hs(\"%s\")\n"), __FUNCTION__, pszFile);
@@ -121,7 +121,7 @@ BOOL FileListAddCatalog(_Inout_ PFILE_LIST pList, _In_ LPCTSTR pszCatalog)
 {
     if (pList && pszCatalog && *pszCatalog) {
 
-        FILE *f = _tfopen(pszCatalog, _T("rS, ccs=UTF-8"));
+        FILE* f = _tfopen(pszCatalog, _T("rS, ccs=UTF-8"));
 #if _DEBUG || DBG
         _tprintf(_T("[d] %hs(\"%s\")\n"), __FUNCTION__, pszCatalog);
 #endif

@@ -26,28 +26,32 @@ DWORD VersionString(HMODULE module, LPCTSTR stringName, LPTSTR stringData, ULONG
         if (versionRes) {
             HGLOBAL versionGlobal = LoadResource(module, versionRes);
             if (versionGlobal) {
-                void *versionPtr = LockResource(versionGlobal);
+                void* versionPtr = LockResource(versionGlobal);
                 if (versionPtr) {
 
                     struct {
                         WORD language;
                         WORD codepage;
-                    } *codepage;
+                    }* codepage;
                     UINT length = sizeof(*codepage);
 
-                    if (VerQueryValue(versionPtr, L"\\VarFileInfo\\Translation", (LPVOID *)&codepage, &length)) {
-                        TCHAR *stringPtr = NULL;
+                    if (VerQueryValue(versionPtr, L"\\VarFileInfo\\Translation", (LPVOID*)&codepage, &length)) {
+                        TCHAR* stringPtr = NULL;
                         TCHAR subblock[128];
-                        StringCchPrintf(subblock, _countof(subblock), _T("\\StringFileInfo\\%04hx%04hx\\%s"), codepage->language,
-                                        codepage->codepage, stringName);
+                        StringCchPrintf(subblock,
+                                        _countof(subblock),
+                                        _T("\\StringFileInfo\\%04hx%04hx\\%s"),
+                                        codepage->language,
+                                        codepage->codepage,
+                                        stringName);
 
-                        if (VerQueryValue(versionPtr, subblock, (void **)&stringPtr, &length)) {
+                        if (VerQueryValue(versionPtr, subblock, (void**)&stringPtr, &length)) {
                             StringCchCopyN(stringData, stringCapacity, stringPtr, length);
                         } else {
-                            err = GetLastError(); // ERROR_RESOURCE_TYPE_NOT_FOUND
+                            err = GetLastError();    // ERROR_RESOURCE_TYPE_NOT_FOUND
                         }
                     } else {
-                        err = GetLastError(); // ERROR_RESOURCE_TYPE_NOT_FOUND
+                        err = GetLastError();    // ERROR_RESOURCE_TYPE_NOT_FOUND
                     }
                 }
             }
@@ -132,7 +136,8 @@ void PrintUsage()
              _T("  %s prompt \"@C:\\Dir with spaces\\FileCatalog.txt\"\n")
 #endif
              _T("\n"),
-             filename, filename,
+             filename,
+             filename,
 #ifdef ENABLE_FRAGMENTATION
              filename,
 #endif
@@ -142,7 +147,8 @@ void PrintUsage()
 #ifdef ENABLE_FRAGMENTATION
              DEFAULT_TARGET_FRAGMENT_COUNT,
 #endif
-             filename, filename
+             filename,
+             filename
 #ifdef ENABLE_PROMPT
              ,
              filename
@@ -162,10 +168,15 @@ LPTSTR FormatError(_In_ DWORD err, _Out_ LPTSTR pszError, _In_ ULONG iErrorLen)
     if (pszError && iErrorLen) {
         DWORD len = 0;
         pszError[0] = _T('\0');
-        if ((len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), pszError, iErrorLen,
-                                 NULL)) == 0) {
-            if ((len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE, GetModuleHandle(_T("ntdll")), err,
-                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), pszError, iErrorLen, NULL)) == 0) {
+        if ((len = FormatMessage(
+                 FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), pszError, iErrorLen, NULL)) == 0) {
+            if ((len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_FROM_HMODULE,
+                                     GetModuleHandle(_T("ntdll")),
+                                     err,
+                                     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                     pszError,
+                                     iErrorLen,
+                                     NULL)) == 0) {
                 // Try others...
             }
         }
@@ -233,9 +244,11 @@ BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _
 #ifdef ENABLE_FRAGMENTATION
                 _tprintf(_T("Action (simulate:%s, compact:%s, fragments:%u) : "),
                          pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T("ON") : _T("OFF"),
-                         pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T("ON") : _T("OFF"), pOptions->TargetFragmentCount);
+                         pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T("ON") : _T("OFF"),
+                         pOptions->TargetFragmentCount);
 #else
-                _tprintf(_T("Action (simulate:%s, compact:%s) : "), pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T("ON") : _T("OFF"),
+                _tprintf(_T("Action (simulate:%s, compact:%s) : "),
+                         pOptions->Flags & DEFRAG_FLAG_SIMULATE ? _T("ON") : _T("OFF"),
                          pOptions->Flags & DEFRAG_FLAG_COMPACT ? _T("ON") : _T("OFF"));
 #endif
 
@@ -244,19 +257,19 @@ BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _
                     pOptions->Flags ^= DEFRAG_FLAG_COMPACT;
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("d"), -1) == CSTR_EQUAL) {
                     pOptions->Flags &= ~DEFRAG_FLAG_FRAGMENT;
-                    return TRUE; // Continue defragmenting
+                    return TRUE;    // Continue defragmenting
 #ifdef ENABLE_FRAGMENTATION
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("fc"), -1) == CSTR_EQUAL) {
                     _tscanf(_T("%255s"), szInput);
                     pOptions->TargetFragmentCount = (ULONG)_tcstoul(szInput, NULL, 10);
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("f"), -1) == CSTR_EQUAL) {
                     pOptions->Flags |= DEFRAG_FLAG_FRAGMENT;
-                    return TRUE; // Continue fragmenting
+                    return TRUE;    // Continue fragmenting
 #endif
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("s"), -1) == CSTR_EQUAL) {
                     pOptions->Flags ^= DEFRAG_FLAG_SIMULATE;
                 } else if (CompareString(CP_ACP, NORM_IGNORECASE, szInput, -1, _T("q"), -1) == CSTR_EQUAL) {
-                    return FALSE; // Abort everything
+                    return FALSE;    // Abort everything
                 } else {
                     _tprintf(_T("  Unknown action \"%s\"\n"), szInput);
                 }
@@ -275,11 +288,11 @@ BOOL DefragTrace(_In_ LPVOID lpParam, _In_ int iStep, _In_opt_ LPVOID pParam1, _
 }
 
 
-int __cdecl _tmain(_In_ int argc, _In_ _TCHAR *argv[], _In_ _TCHAR *envp[])
+int __cdecl _tmain(_In_ int argc, _In_ _TCHAR* argv[], _In_ _TCHAR* envp[])
 {
 #define COMMAND_NONE 0
 #define COMMAND_ANALYZE 1
-#define COMMAND_DEFRAG 2 // defragment, fragment, prompt
+#define COMMAND_DEFRAG 2    // defragment, fragment, prompt
 
     DWORD err = ERROR_SUCCESS;
     ULONG command = COMMAND_NONE;
@@ -378,7 +391,7 @@ int __cdecl _tmain(_In_ int argc, _In_ _TCHAR *argv[], _In_ _TCHAR *envp[])
                 } else if ((command == COMMAND_DEFRAG) &&
                            (CompareString(CP_ACP, NORM_IGNORECASE, option, 6, _T("count="), -1) == CSTR_EQUAL) && (i + 1 < argc)) {
 
-                    options.TargetFragmentCount = (ULONG)_tcstoul(option + 6, NULL, 10); // --count=123
+                    options.TargetFragmentCount = (ULONG)_tcstoul(option + 6, NULL, 10);    // --count=123
 #endif
                 } else if ((command == COMMAND_DEFRAG) &&
                            (CompareString(CP_ACP, NORM_IGNORECASE, option, -1, _T("simulate"), -1) == CSTR_EQUAL)) {
@@ -441,7 +454,7 @@ int __cdecl _tmain(_In_ int argc, _In_ _TCHAR *argv[], _In_ _TCHAR *envp[])
     // Pause
     if (prompt && (err != ERROR_REQUEST_ABORTED)) {
         _tprintf(_T("Press any key to exit . . . "));
-        _getch(); // note: _getwch doesn't exist in Windows 2000 and older
+        _getch();    // note: _getwch doesn't exist in Windows 2000 and older
         _tprintf(_T("\n"));
     }
 

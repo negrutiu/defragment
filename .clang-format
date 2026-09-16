@@ -6,10 +6,18 @@ BreakBeforeBraces: Linux                    # Like "Attach", but break before br
 # SpaceBeforeParens: ControlStatements
 # AllowShortIfStatementsOnASingleLine: true
 # AllowShortLoopsOnASingleLine: true
-# AllowShortFunctionsOnASingleLine: All
-BinPackParameters: true
-BinPackArguments: true
+AllowShortFunctionsOnASingleLine: None      # None, InlineOnly, Empty, Inline, All
+PackParameters:
+  BinPack: OnePerLine                       # BinPack, OnePerLine, AlwaysOnePerLine, UseBreakAfter
+PackArguments:
+  BinPack: OnePerLine
 CompactNamespaces: true
 ColumnLimit: 140
 MaxEmptyLinesToKeep: 2
 SortIncludes: false
+FixNamespaceComments: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+IndentAccessModifiers: False                # public:, protected:, private:
+AccessModifierOffset: -4
+SpacesBeforeTrailingComments: 4

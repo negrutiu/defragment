@@ -14,21 +14,21 @@ extern "C" {
 
 /// \brief Fragmentation analysis results.
 typedef struct {
-    ULONG FileCount;            ///< Number of files.
-    ULONG64 TotalSize;          ///< Total size of all files in bytes.
-    ULONG64 MinFileFragments;   ///< The least fragmented file (1 means no fragments, 2 means 2 fragments, etc.)
-    ULONG64 MaxFileFragments;   ///< The most fragmented file.
-    ULONG64 ClusterCount;       ///< Total number of clusters used by all files.
-    ULONG64 ExtentCount;        ///< Total number of extents (fragments) used by all files.
-    ULONG64 DiffuseExtentCount; ///< Number of extents that are not adjacent to any other extent of the same file.
+    ULONG FileCount;               ///< Number of files.
+    ULONG64 TotalSize;             ///< Total size of all files in bytes.
+    ULONG64 MinFileFragments;      ///< The least fragmented file (1 means no fragments, 2 means 2 fragments, etc.)
+    ULONG64 MaxFileFragments;      ///< The most fragmented file.
+    ULONG64 ClusterCount;          ///< Total number of clusters used by all files.
+    ULONG64 ExtentCount;           ///< Total number of extents (fragments) used by all files.
+    ULONG64 DiffuseExtentCount;    ///< Number of extents that are not adjacent to any other extent of the same file.
 } DEFRAG_ANALYSIS, *PDEFRAG_ANALYSIS;
 
 
 /// \brief File moving results/statistics.
 typedef struct {
-    ULONG64 FileCount;    ///< Number of files moved.
-    ULONG64 TotalSize;    ///< Number of bytes moved.
-    ULONG64 ClusterCount; ///< Number of clusters moved.
+    ULONG64 FileCount;       ///< Number of files moved.
+    ULONG64 TotalSize;       ///< Number of bytes moved.
+    ULONG64 ClusterCount;    ///< Number of clusters moved.
 } DEFRAG_MOVE, *PDEFRAG_MOVE;
 
 
@@ -61,12 +61,12 @@ typedef BOOL (*DefragmentTraceCallback)(_In_ LPVOID lpParam, _In_ int iStep, _In
 
 /// \brief Options for analysis and de/fragmentation.
 typedef struct {
-    ULONG Flags;                         ///< Combination of DEFRAG_FLAG_XXX.
-    ULONG TargetFragmentCount;           ///< Break files into this many fragments when fragmenting. Ignored when defragmenting.
-    DefragmentLoggingCallback fnLogging; ///< Optional logging function.
-    LPVOID lpLoggingParam;               ///< Optional logging function custom parameter.
-    DefragmentTraceCallback fnTracing;   ///< Optional tracing (progress) function.
-    LPVOID lpTracingParam;               ///< Optional tracing function custom parameter.
+    ULONG Flags;                            ///< Combination of DEFRAG_FLAG_XXX.
+    ULONG TargetFragmentCount;              ///< Break files into this many fragments when fragmenting. Ignored when defragmenting.
+    DefragmentLoggingCallback fnLogging;    ///< Optional logging function.
+    LPVOID lpLoggingParam;                  ///< Optional logging function custom parameter.
+    DefragmentTraceCallback fnTracing;      ///< Optional tracing (progress) function.
+    LPVOID lpTracingParam;                  ///< Optional tracing function custom parameter.
 } DEFRAG_OPTIONS, *PDEFRAG_OPTIONS;
 
 
@@ -75,7 +75,7 @@ typedef struct {
 /// \param ppszFiles Array of \c LPCTSTR file patterns. Wildcards are allowed. The last entry must be \c NULL.
 /// \param pIn Input options.
 /// \param pOut Output analysis results.
-DWORD DefragAnalyzeFiles(_In_ LPCTSTR *ppszFiles, _In_opt_ PDEFRAG_OPTIONS pIn, _Out_opt_ PDEFRAG_ANALYSIS pOut);
+DWORD DefragAnalyzeFiles(_In_ LPCTSTR* ppszFiles, _In_opt_ PDEFRAG_OPTIONS pIn, _Out_opt_ PDEFRAG_ANALYSIS pOut);
 
 
 /// \brief Move (defragment or fragment) files.
@@ -87,7 +87,7 @@ DWORD DefragAnalyzeFiles(_In_ LPCTSTR *ppszFiles, _In_opt_ PDEFRAG_OPTIONS pIn, 
 /// \return Win32 error code.
 ///   De/Fragmenting may fail when there's intense disk activity while moving the fragments.
 ///   In such case it's recommended to retry multiple times until success.
-DWORD DefragMoveFiles(_In_ LPCTSTR *ppszFiles, _In_opt_ PDEFRAG_OPTIONS pIn, _Out_opt_ PDEFRAG_MOVE pOut);
+DWORD DefragMoveFiles(_In_ LPCTSTR* ppszFiles, _In_opt_ PDEFRAG_OPTIONS pIn, _Out_opt_ PDEFRAG_MOVE pOut);
 
 
 #ifdef __cplusplus
